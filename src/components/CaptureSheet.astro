@@ -80,7 +80,7 @@ import Quiz from './Quiz.astro';
           </p>
         </div>
 
-        <button class="btn-primary" type="submit">Join the community</button>
+        <button class="btn-primary" type="submit">Download</button>
       </form>
     </section>
 
@@ -308,6 +308,8 @@ import Quiz from './Quiz.astro';
 
 <script>
   import { MW, emit, on } from '../scripts/events';
+  import { downloadWallpaper } from '../scripts/wallpaper';
+  import type { WorldKey } from '../data/worlds';
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const phoneValid = (v: string) => {
@@ -339,6 +341,11 @@ import Quiz from './Quiz.astro';
 
     let mode: 'phone' | 'email' = 'phone'; // option 1 by default
     let lastFocused: HTMLElement | null = null;
+    // the wallpaper currently centred in the reel — the Download target
+    let currentWorld: WorldKey = 'stoic';
+    on(MW.reelWorld, (d) => {
+      currentWorld = d.world;
+    });
 
     const focusables = () =>
       Array.from(
@@ -445,6 +452,10 @@ import Quiz from './Quiz.astro';
       }
       activeErr.hidden = true;
       active.removeAttribute('aria-invalid');
+
+      // hand over the wallpaper they're looking at — non-blocking, and the flow
+      // proceeds whether or not the download starts
+      void downloadWallpaper(currentWorld);
 
       viewCapture.hidden = true;
       emit(MW.captureSubmit, {

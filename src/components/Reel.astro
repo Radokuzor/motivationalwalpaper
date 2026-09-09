@@ -33,7 +33,7 @@ import LockScreen from './LockScreen.astro';
 
   <div class="chevron" aria-hidden="true"></div>
   <p class="reel-index" aria-hidden="true">01 / &#8734;</p>
-  <button class="cta" id="reel-cta" type="button">Join the community</button>
+  <button class="cta" id="reel-cta" type="button">Download</button>
   <div class="reel-dots" id="reel-dots" role="presentation"></div>
   <div class="reel-preview" id="reel-preview" aria-hidden="true">
     <div class="preview-wall"></div>
@@ -391,12 +391,18 @@ import LockScreen from './LockScreen.astro';
       return b;
     });
 
+    let activeWorld: WorldKey | null = null;
     function setActive(key: WorldKey) {
       const idx = REEL_ORDER.indexOf(key);
       if (idx < 0) return;
       const n = String(idx + 1).padStart(2, '0');
       if (reelIndex) reelIndex.textContent = `${n} / ∞`;
       dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
+      // tell the capture sheet which wallpaper is on screen (download target)
+      if (key !== activeWorld) {
+        activeWorld = key;
+        emit(MW.reelWorld, { world: key });
+      }
     }
 
     if ('IntersectionObserver' in window) {
