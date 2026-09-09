@@ -1,0 +1,27 @@
+{
+  "name": "motivationalwallpaper",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "motivationalwallpaper.com — a daily identity anchor on your lock screen. Front end.",
+  "engines": {
+    "node": "^18.14.1 || ^20.3.0 || >=21.0.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^7.8.2",
+    "astro": "^4.16.18",
+    "firebase-admin": "^13.10.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/sitemap": "3.2.1",
+    "typescript": "^5.6.3"
+  }
+}

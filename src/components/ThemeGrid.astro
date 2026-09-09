@@ -1,0 +1,127 @@
+---
+/**
+ * ThemeGrid — the right 50% of Screen One on desktop (brand bible §07).
+ * "Browse by theme": a 3-column grid of the six worlds as 9:16 cards.
+ * Hidden below 900px (mobile is the reel alone).
+ *
+ *  - emits mw:world-hover / mw:world-hover-end  (desktop reel cross-fade)
+ *  - emits mw:world-select                      (scroll the reel to that world)
+ */
+import { WORLDS } from '../data/worlds';
+import Wordmark from './Wordmark.astro';
+---
+
+<aside class="browse" aria-label="Browse wallpapers by theme">
+  <a href="/" class="browse__home" aria-label="motivationalwallpaper home">
+    <Wordmark size="1rem" dotCom />
+  </a>
+  <p class="browse__label">Browse by theme</p>
+  <div class="theme-grid">
+    {
+      WORLDS.map((w) => (
+        <button
+          class="theme-card"
+          type="button"
+          data-world={w.key}
+          data-light={w.labelShadow === 'none' ? 'true' : 'false'}
+          style={`--art:${w.art};--label-shadow:${w.labelShadow};--fg:${w.overlay};`}
+        >
+          <span>{w.name}</span>
+        </button>
+      ))
+    }
+  </div>
+</aside>
+
+<style>
+  .browse {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    .browse {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow-y: auto;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 34px 34px calc(34px + env(safe-area-inset-bottom));
+    }
+  }
+
+  .browse__home {
+    text-decoration: none;
+  }
+  .browse__label {
+    margin: 22px 0 14px;
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-track);
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .theme-card {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    border: 0;
+    border-radius: var(--r-m);
+    overflow: hidden;
+    background: var(--art);
+    padding: 0;
+    cursor: pointer;
+  }
+  .theme-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.28), transparent 45%);
+  }
+  .theme-card[data-light="true"]::after {
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.3), transparent 45%);
+  }
+  .theme-card span {
+    position: absolute;
+    left: 10px;
+    bottom: 9px;
+    z-index: 1;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    text-shadow: var(--label-shadow);
+  }
+  .theme-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>
+
+<script>
+  import { MW, emit } from '../scripts/events';
+  import type { WorldKey } from '../data/worlds';
+
+  function init() {
+    const cards = document.querySelectorAll<HTMLButtonElement>('.theme-card');
+    cards.forEach((card) => {
+      const world = card.dataset.world as WorldKey | undefined;
+      if (!world) return;
+      const show = () => emit(MW.worldHover, { world });
+      const hide = () => emit(MW.worldHoverEnd);
+      card.addEventListener('mouseenter', show);
+      card.addEventListener('mouseleave', hide);
+      card.addEventListener('focus', show);
+      card.addEventListener('blur', hide);
+      card.addEventListener('click', () => emit(MW.worldSelect, { world }));
+    });
+  }
+
+  init();
+</script>

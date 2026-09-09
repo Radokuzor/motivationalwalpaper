@@ -1,0 +1,24 @@
+---
+/**
+ * SiteFooter — one quiet line. No nav sprawl.
+ */
+import Wordmark from './Wordmark.astro';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <Wordmark size="0.9375rem" dotCom />
+  <p>A daily identity anchor for your lock screen. &copy; {year}</p>
+</footer>
+
+<style>
+  .site-footer {
+    padding: 32px 24px 48px;
+    border-top: 1px solid var(--hairline);
+    color: var(--ink-faint);
+    font-size: var(--t-small-size);
+  }
+  .site-footer p {
+    margin: 0.4rem 0 0;
+  }
+</style>

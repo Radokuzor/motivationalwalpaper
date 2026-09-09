@@ -1,0 +1,32 @@
+---
+/**
+ * SkeletonNote — a visible "this page is a placeholder" banner for routes that
+ * exist for structure only. Remove when the page is built for real.
+ */
+export interface Props {
+  /** which brand-bible Queue item / doc this page will be built from. */
+  source?: string;
+}
+const { source } = Astro.props;
+---
+
+<aside class="skel" role="note">
+  <strong>Skeleton route.</strong> Structure only — full design is a later pass.
+  {source && <span> Build from: {source}.</span>}
+</aside>
+
+<style>
+  .skel {
+    margin: 0 0 28px;
+    padding: 12px 16px;
+    border: 1px dashed var(--hairline-strong);
+    border-radius: var(--r-s);
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-size: var(--t-small-size);
+    line-height: 1.5;
+  }
+  .skel strong {
+    color: var(--ink);
+  }
+</style>

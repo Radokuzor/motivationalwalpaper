@@ -1,0 +1,115 @@
+---
+/**
+ * /quiz — SKELETON. The full-page version of the profile survey
+ * (brand bible Queue #1). Today the survey only runs inline inside the capture
+ * sheet on Screen One; this route reserves the URL and previews the copy.
+ */
+import ChromeLayout from '../layouts/ChromeLayout.astro';
+import SkeletonNote from '../components/SkeletonNote.astro';
+import { STEPS, QUIZ_COPY } from '../data/quiz';
+---
+
+<ChromeLayout
+  title="Profile survey — motivationalwallpaper.com"
+  description="A few quick questions so tomorrow's motivation fits you better."
+  noindex
+>
+  <SkeletonNote source="brand bible Queue #1, doc 02 “Profile quiz”" />
+
+  <h1>{QUIZ_COPY.confirmHeading}</h1>
+  <p class="lead">{QUIZ_COPY.confirmSub}</p>
+
+  <ol class="q-preview">
+    {
+      STEPS.map((step) => (
+        <li>
+          {step.kind === 'demo' ? (
+            <>
+              {step.groups.map((g) => (
+                <>
+                  <p class="q-preview__prompt">{g.label}</p>
+                  <ul>
+                    {g.options.map((o) => (
+                      <li>{o}</li>
+                    ))}
+                  </ul>
+                </>
+              ))}
+            </>
+          ) : step.kind === 'multi' ? (
+            <>
+              <p class="q-preview__prompt">
+                {step.prompt} <span class="fine">({step.helper})</span>
+              </p>
+              <ul>
+                {step.options.map((o) => (
+                  <li>
+                    {o.name} — {o.tag}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <p class="q-preview__prompt">{step.prompt}</p>
+              <ul>
+                {step.options.map((o) => (
+                  <li>{o.label}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+
+  <p class="fine">
+    Behaviour to build: age + gender on one screen, then one question per screen,
+    advance on select, foot dots for progress, no skip / back. Reuse
+    <code>src/data/quiz.ts</code> and the routing in <code>routeProfile()</code>.
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.4rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    margin: 0 0 2rem;
+  }
+  .q-preview {
+    list-style: decimal;
+    padding-left: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+  .q-preview__prompt {
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+  .q-preview ul {
+    margin: 0 0 0.8rem;
+    padding-left: 1.1rem;
+    color: var(--ink-soft);
+  }
+  .fine {
+    margin-top: 2.5rem;
+    font-size: var(--t-small-size);
+    color: var(--ink-faint);
+  }
+  .q-preview__prompt .fine {
+    margin: 0;
+    font-weight: 400;
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+</style>

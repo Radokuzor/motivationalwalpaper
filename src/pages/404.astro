@@ -1,0 +1,65 @@
+---
+/**
+ * 404 — on-brand not-found. Matters: the plan is to resurface URLs that have
+ * backlinks with real content over time; until then inbound links land here,
+ * not on a browser default.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Wordmark from '../components/Wordmark.astro';
+---
+
+<BaseLayout
+  title="Not found — motivationalwallpaper.com"
+  description="That page isn't here. Start from the lock screen."
+  noindex
+>
+  <main class="nf">
+    <a href="/" aria-label="motivationalwallpaper home"><Wordmark size="1.0625rem" dotCom /></a>
+    <p class="nf__code">404</p>
+    <h1>This one got away.</h1>
+    <p class="nf__body">The page you're after isn't here. Today's still is.</p>
+    <p class="nf__links">
+      <a href="/">Back to the lock screen</a>
+      <span aria-hidden="true">·</span>
+      <a href="/gallery">Browse by world</a>
+    </p>
+  </main>
+</BaseLayout>
+
+<style>
+  .nf {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 24px;
+  }
+  .nf > a {
+    text-decoration: none;
+    margin-bottom: 1.5rem;
+  }
+  .nf__code {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    margin: 0;
+  }
+  .nf h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0;
+  }
+  .nf__body {
+    color: var(--ink-soft);
+    margin: 0.25rem 0 1.25rem;
+  }
+  .nf__links {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    font-size: var(--t-small-size);
+  }
+</style>

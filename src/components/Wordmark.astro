@@ -1,0 +1,42 @@
+---
+/**
+ * Wordmark — brand bible §03.
+ * One lowercase word, Schibsted Grotesk Medium, tracking -0.02em, always
+ * lowercase. `.com` optional and never bolder than the name (--ink-faint).
+ * No gradient/glow/bevel. Never Title Case or ALL CAPS.
+ */
+export interface Props {
+  /** font-size, any CSS length. */
+  size?: string;
+  /** show the trailing ".com". */
+  dotCom?: boolean;
+  /** opacity (e.g. over artwork: 0.62). */
+  opacity?: number;
+  class?: string;
+}
+const { size = '1rem', dotCom = false, opacity, class: klass } = Astro.props;
+---
+
+<span
+  class:list={['wordmark', klass]}
+  style={`--wm-size:${size};${opacity != null ? `--wm-opacity:${opacity};` : ''}`}
+>
+  motivationalwallpaper{dotCom && <span class="dotcom">.com</span>}
+</span>
+
+<style>
+  .wordmark {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-size: var(--wm-size, 1rem);
+    color: var(--ink);
+    opacity: var(--wm-opacity, 1);
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+  .dotcom {
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+</style>

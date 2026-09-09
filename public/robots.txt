@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://motivationalwallpaper.com/sitemap-index.xml

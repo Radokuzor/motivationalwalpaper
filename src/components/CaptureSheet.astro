@@ -1,0 +1,475 @@
+---
+/**
+ * CaptureSheet — brand bible §06 / §07 (adapted).
+ * Mobile: rises from the bottom (~60% height, 20px top corners, grab handle).
+ * Desktop (>=900px): the same content as a centred modal.
+ *
+ * Contact is captured by ONE method at a time — a Phone / Email toggle, phone
+ * selected by default (option 1). Signing up is OPTIONAL: a blank field still
+ * proceeds; a filled-in field gets a light validity check. No real submission in
+ * this prototype.
+ *
+ *  - listens mw:open-capture   (Reel CTA / tapping the wallpaper)
+ *  - emits   mw:capture-submit  -> { email, phone } (either or both may be '')
+ */
+import Quiz from './Quiz.astro';
+---
+
+<div class="backdrop" id="mw-backdrop" hidden></div>
+
+<div
+  class="sheet"
+  id="mw-sheet"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="mw-sheet-title"
+  hidden
+>
+  <span class="grab" aria-hidden="true"></span>
+  <div class="sheet-scroll">
+    <section class="view view-capture" id="mw-view-capture">
+      <h2 id="mw-sheet-title">Where should we reach you?</h2>
+
+      <div class="contact-toggle" role="group" aria-label="Contact method">
+        <button type="button" class="ct-opt is-on" id="mw-ct-phone" aria-pressed="true">
+          Phone
+        </button>
+        <button type="button" class="ct-opt" id="mw-ct-email" aria-pressed="false">
+          Email
+        </button>
+      </div>
+
+      <form id="mw-capture-form" novalidate>
+        <input
+          type="text"
+          name="company"
+          id="mw-company"
+          tabindex="-1"
+          autocomplete="off"
+          aria-hidden="true"
+          style="position:absolute;left:-9999px;opacity:0;height:0;width:0"
+        />
+        <div class="field" id="mw-phone-field">
+          <label for="mw-phone">Phone number</label>
+          <input
+            id="mw-phone"
+            name="phone"
+            type="tel"
+            placeholder="(555) 000-0000"
+            autocomplete="tel"
+            inputmode="tel"
+          />
+          <p class="err" id="mw-phone-err" role="alert" hidden>
+            Enter a valid phone number.
+          </p>
+        </div>
+
+        <div class="field" id="mw-email-field" hidden>
+          <label for="mw-email">Email address</label>
+          <input
+            id="mw-email"
+            name="email"
+            type="email"
+            placeholder="you@email.com"
+            autocomplete="email"
+            inputmode="email"
+            spellcheck="false"
+          />
+          <p class="err" id="mw-email-err" role="alert" hidden>
+            Enter a valid email address.
+          </p>
+        </div>
+
+        <button class="btn-primary" type="submit">Join the community</button>
+      </form>
+    </section>
+
+    <Quiz />
+  </div>
+</div>
+
+<style>
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 200ms linear;
+  }
+  .backdrop.show {
+    opacity: 1;
+  }
+
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 51;
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 20px 20px 0 0;
+    padding: 14px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height: 82dvh;
+    overflow: hidden;
+    box-shadow: 0 -14px 44px -14px rgba(0, 0, 0, 0.4);
+    transform: translateY(101%);
+    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .sheet.show {
+    transform: translateY(0);
+  }
+
+  .grab {
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: var(--r-pill);
+    background: var(--hairline-strong);
+    margin: 2px auto 12px;
+  }
+  .sheet-scroll {
+    max-height: calc(82dvh - 44px);
+    overflow-y: auto;
+  }
+
+  .view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .view h2 {
+    margin: 0;
+    font-size: var(--t-title2-size);
+    font-weight: var(--t-title2-weight);
+    letter-spacing: var(--t-title2-track);
+    line-height: var(--t-title2-leading);
+    text-wrap: balance;
+  }
+  .view h2:focus {
+    outline: none;
+  }
+  .helper {
+    margin: 0;
+    font-size: var(--t-small-size);
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  /* phone / email toggle — phone is option 1, selected by default */
+  .contact-toggle {
+    display: flex;
+    gap: 6px;
+    margin: 2px 0;
+  }
+  .ct-opt {
+    flex: 1;
+    height: 36px;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--hairline-strong);
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+  }
+  .ct-opt:hover {
+    border-color: var(--ink);
+  }
+  .ct-opt.is-on {
+    border-color: var(--ink);
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 6px 0 0;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field[hidden] {
+    display: none;
+  }
+  .field label {
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-track);
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .field input {
+    height: 44px;
+    padding: 0 14px;
+    border-radius: var(--r-s);
+    border: 1px solid var(--hairline-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .field input::placeholder {
+    color: var(--ink-faint);
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  .field input[aria-invalid="true"] {
+    border-color: #a5443a;
+  }
+  .err {
+    margin: 0;
+    font-size: 13px;
+    color: #a5443a;
+  }
+  .err[hidden] {
+    display: none;
+  }
+
+  .btn-primary {
+    height: 44px;
+    padding: 0 22px;
+    border-radius: var(--r-pill);
+    border: 1px solid transparent;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  @media (min-width: 900px) {
+    .sheet {
+      left: 50%;
+      right: auto;
+      top: 50%;
+      bottom: auto;
+      width: min(420px, calc(100vw - 48px));
+      border-radius: 20px;
+      padding: 24px;
+      transform: translate(-50%, -46%) scale(0.96);
+      opacity: 0;
+      transition:
+        transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+        opacity 200ms linear;
+    }
+    .sheet.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+    .grab {
+      display: none;
+    }
+    .sheet-scroll {
+      max-height: min(76dvh, 600px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .backdrop {
+      transition: opacity 120ms ease;
+    }
+    .sheet,
+    .sheet.show {
+      transition: opacity 120ms ease !important;
+      transform: none !important;
+    }
+    .sheet {
+      opacity: 0;
+    }
+    .sheet.show {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) and (min-width: 900px) {
+    .sheet,
+    .sheet.show {
+      transform: translate(-50%, -50%) !important;
+    }
+  }
+</style>
+
+<script>
+  import { MW, emit, on } from '../scripts/events';
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneValid = (v: string) => {
+    const digits = v.replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15;
+  };
+
+  function init() {
+    const backdrop = document.getElementById('mw-backdrop');
+    const sheet = document.getElementById('mw-sheet');
+    const form = document.getElementById('mw-capture-form') as HTMLFormElement | null;
+    const company = document.getElementById('mw-company') as HTMLInputElement | null;
+    const email = document.getElementById('mw-email') as HTMLInputElement | null;
+    const phone = document.getElementById('mw-phone') as HTMLInputElement | null;
+    const emailErr = document.getElementById('mw-email-err');
+    const phoneErr = document.getElementById('mw-phone-err');
+    const emailField = document.getElementById('mw-email-field');
+    const phoneField = document.getElementById('mw-phone-field');
+    const ctPhone = document.getElementById('mw-ct-phone');
+    const ctEmail = document.getElementById('mw-ct-email');
+    const viewCapture = document.getElementById('mw-view-capture');
+    if (
+      !backdrop || !sheet || !form || !company || !email || !phone || !emailErr ||
+      !phoneErr || !emailField || !phoneField || !ctPhone || !ctEmail ||
+      !viewCapture
+    ) {
+      return;
+    }
+
+    let mode: 'phone' | 'email' = 'phone'; // option 1 by default
+    let lastFocused: HTMLElement | null = null;
+
+    const focusables = () =>
+      Array.from(
+        sheet.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        closeSheet();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    function setMode(next: 'phone' | 'email') {
+      mode = next;
+      const onPhone = next === 'phone';
+      ctPhone!.classList.toggle('is-on', onPhone);
+      ctEmail!.classList.toggle('is-on', !onPhone);
+      ctPhone!.setAttribute('aria-pressed', String(onPhone));
+      ctEmail!.setAttribute('aria-pressed', String(!onPhone));
+      phoneField!.hidden = !onPhone;
+      emailField!.hidden = onPhone;
+      phoneErr!.hidden = true;
+      emailErr!.hidden = true;
+      phone!.removeAttribute('aria-invalid');
+      email!.removeAttribute('aria-invalid');
+      (onPhone ? phone! : email!).focus();
+    }
+
+    function openSheet() {
+      if (!sheet!.hidden) return;
+      lastFocused = document.activeElement as HTMLElement | null;
+      backdrop!.hidden = false;
+      sheet!.hidden = false;
+      document.body.classList.add('mw-sheet-open');
+      requestAnimationFrame(() => {
+        backdrop!.classList.add('show');
+        sheet!.classList.add('show');
+      });
+      document.addEventListener('keydown', onKey);
+      setTimeout(() => {
+        if (!viewCapture!.hidden) (mode === 'phone' ? phone! : email!).focus();
+        else {
+          sheet!.querySelector<HTMLElement>('.pick, .opt, .fig')?.focus();
+        }
+      }, 80);
+    }
+
+    function closeSheet() {
+      if (sheet!.hidden) return;
+      backdrop!.classList.remove('show');
+      sheet!.classList.remove('show');
+      document.removeEventListener('keydown', onKey);
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        backdrop!.hidden = true;
+        sheet!.hidden = true;
+        document.body.classList.remove('mw-sheet-open');
+        sheet!.removeEventListener('transitionend', finish);
+        lastFocused?.focus();
+      };
+      sheet!.addEventListener('transitionend', finish);
+      setTimeout(finish, 400);
+    }
+
+    ctPhone.addEventListener('click', () => {
+      if (mode !== 'phone') setMode('phone');
+    });
+    ctEmail.addEventListener('click', () => {
+      if (mode !== 'email') setMode('email');
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // contact is optional — a blank field still proceeds; only a filled-in
+      // field gets a validity check
+      const active = mode === 'phone' ? phone : email;
+      const activeErr = mode === 'phone' ? phoneErr : emailErr;
+      const v = active.value.trim();
+      const valid = mode === 'phone' ? phoneValid(v) : EMAIL_RE.test(v);
+
+      if (v && !valid) {
+        activeErr.hidden = false;
+        active.setAttribute('aria-invalid', 'true');
+        active.focus();
+        return;
+      }
+      activeErr.hidden = true;
+      active.removeAttribute('aria-invalid');
+
+      viewCapture.hidden = true;
+      emit(MW.captureSubmit, {
+        email: mode === 'email' ? v : '',
+        phone: mode === 'phone' ? v : '',
+        company: company.value,
+      });
+    });
+
+    email.addEventListener('input', () => {
+      if (!emailErr.hidden && EMAIL_RE.test(email.value.trim())) {
+        emailErr.hidden = true;
+        email.removeAttribute('aria-invalid');
+      }
+    });
+    phone.addEventListener('input', () => {
+      if (!phoneErr.hidden && phoneValid(phone.value.trim())) {
+        phoneErr.hidden = true;
+        phone.removeAttribute('aria-invalid');
+      }
+    });
+
+    backdrop.addEventListener('click', closeSheet);
+    on(MW.openCapture, openSheet);
+  }
+
+  init();
+</script>

@@ -1,0 +1,164 @@
+---
+/**
+ * /iphone-wallpapers/<theme> — SEO landing TEMPLATE.
+ *
+ * The strategy brief's quick win: dedicated pages for iphone-specific terms the
+ * domain can rank for. This file locks the STRUCTURE (H1 + intro + wallpaper
+ * grid + FAQ + FAQPage JSON-LD + canonical). The COPY in src/data/seo-themes.ts
+ * is placeholder — real keyword-researched content is a later pass, and these
+ * pages stay `noindex` until it lands.
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+import SkeletonNote from '../../components/SkeletonNote.astro';
+import { SEO_THEMES } from '../../data/seo-themes';
+import { worldByKey } from '../../data/worlds';
+
+export function getStaticPaths() {
+  return SEO_THEMES.map((theme) => ({
+    params: { theme: theme.slug },
+    props: { theme },
+  }));
+}
+
+const { theme } = Astro.props;
+const worlds = theme.worlds.map((k) => worldByKey(k));
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: theme.faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+---
+
+<ChromeLayout
+  title={theme.title}
+  description={theme.description}
+  narrow={false}
+  noindex
+>
+  <script
+    is:inline
+    type="application/ld+json"
+    set:html={JSON.stringify(faqJsonLd)}
+    slot="head"
+  />
+
+  <SkeletonNote source="01_strategy_brief.md “Traffic growth priorities” — fill copy in src/data/seo-themes.ts" />
+
+  <h1>{theme.h1}</h1>
+  <p class="lead">{theme.intro}</p>
+
+  <div class="grid">
+    {
+      worlds.map((w) => (
+        <a class="card" href="/" style={`--art:${w.art};`}>
+          <span class="card__line" style={`color:${w.lineColor};font-family:var(--face-${w.key});`}>
+            {w.line}
+          </span>
+          <span class="card__name">{w.name}</span>
+        </a>
+      ))
+    }
+  </div>
+
+  <section class="faq">
+    <h2>Questions</h2>
+    {
+      theme.faqs.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))
+    }
+  </section>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-display-size);
+    font-weight: var(--t-display-weight);
+    letter-spacing: var(--t-display-track);
+    line-height: var(--t-display-leading);
+    margin: 0 0 0.6rem;
+    text-wrap: balance;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 2.5rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 18px;
+    margin-bottom: 3rem;
+  }
+  .card {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    border-radius: var(--r-m);
+    overflow: hidden;
+    background: var(--art);
+    text-decoration: none;
+    display: block;
+  }
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.18),
+      transparent 30%,
+      transparent 62%,
+      rgba(0, 0, 0, 0.28)
+    );
+  }
+  .card__line {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    top: 52%;
+    z-index: 1;
+    text-align: center;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .card__name {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    z-index: 1;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  }
+
+  .faq h2 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 1rem;
+  }
+  .faq details {
+    border-bottom: 1px solid var(--hairline);
+    padding: 14px 0;
+  }
+  .faq summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .faq p {
+    margin: 0.6rem 0 0;
+    color: var(--ink-soft);
+  }
+</style>

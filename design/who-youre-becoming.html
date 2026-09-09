@@ -1,0 +1,928 @@
+<title>Who You're Becoming</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* ============================================================
+     WHO YOU'RE BECOMING — brand bible for motivationalwallpaper.com
+     Master brand register: quiet premium / near-invisible.
+     The chrome disappears so the wallpapers carry the feeling.
+     ============================================================ */
+
+  :root{
+    /* neutrals — chosen warm, not defaulted grey */
+    --paper:#FAF9F7;
+    --surface:#FFFFFF;
+    --surface-2:#F2F0EB;
+    --ink:#17181B;
+    --ink-soft:#57565A;
+    --ink-faint:#8A8A8E;
+    --hairline:#E6E3DC;
+    --hairline-strong:#D6D1C6;
+    /* accent — muted brass / warm grey-gold. never more than a trace */
+    --accent:#8F7142;
+    --accent-strong:#6E5636;
+    --accent-soft:#EFE7D8;
+    --focus:#8F7142;
+    /* device object — a physical thing, same in both themes */
+    --device:#0A0A0B;
+
+    --measure:68ch;
+    --wide:960px;
+    --col:720px;
+
+    --step-display:clamp(2rem, 1.3rem + 3.4vw, 2.875rem);
+    --step-t1:clamp(1.4rem, 1.15rem + 1.1vw, 1.75rem);
+    --step-t2:1.25rem;
+    --step-lead:1.125rem;
+
+    --r-s:8px;
+    --r-m:12px;
+    --r-l:18px;
+
+    color-scheme:light;
+  }
+
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#101013;
+      --surface:#17181C;
+      --surface-2:#1E1F24;
+      --ink:#F1F0EA;
+      --ink-soft:#A2A1A6;
+      --ink-faint:#6F6F74;
+      --hairline:#2A2B30;
+      --hairline-strong:#3B3C43;
+      --accent:#C7A56D;
+      --accent-strong:#DBC49B;
+      --accent-soft:#221F18;
+      --focus:#C7A56D;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#101013;
+    --surface:#17181C;
+    --surface-2:#1E1F24;
+    --ink:#F1F0EA;
+    --ink-soft:#A2A1A6;
+    --ink-faint:#6F6F74;
+    --hairline:#2A2B30;
+    --hairline-strong:#3B3C43;
+    --accent:#C7A56D;
+    --accent-strong:#DBC49B;
+    --accent-soft:#221F18;
+    --focus:#C7A56D;
+    color-scheme:dark;
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size:1rem;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  ::selection{background:var(--accent-soft);color:var(--ink)}
+
+  a{color:var(--accent-strong);text-underline-offset:3px;text-decoration-thickness:1px}
+  a:hover{color:var(--accent)}
+
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+
+  code,.mono{font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace}
+
+  /* ---------- layout scaffold ---------- */
+  .wrap{max-width:var(--wide);margin:0 auto;padding:0 24px}
+  .col{max-width:var(--col)}
+  .prose{max-width:var(--measure)}
+  .prose p{margin:0 0 1rem}
+  main > section{padding:56px 0;border-top:1px solid var(--hairline)}
+  main > section:first-of-type{border-top:0}
+
+  h1,h2,h3,h4{text-wrap:balance;margin:0;font-weight:700;letter-spacing:-0.015em;line-height:1.15}
+  h2{font-size:var(--step-t1)}
+  h3{font-size:var(--step-t2);font-weight:600;letter-spacing:-0.01em;margin:2rem 0 .75rem}
+  h4{font-size:1rem;font-weight:600;letter-spacing:-0.005em}
+
+  .eyebrow{
+    font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-faint);display:flex;align-items:baseline;gap:.6rem;margin-bottom:1rem
+  }
+  .eyebrow .num{font-family:"IBM Plex Mono",monospace;color:var(--accent);letter-spacing:0}
+
+  .lead{font-size:var(--step-lead);line-height:1.55;color:var(--ink)}
+  .fine{font-size:.875rem;color:var(--ink-soft);line-height:1.5}
+  .fine-faint{font-size:.8125rem;color:var(--ink-faint)}
+
+  /* ---------- masthead ---------- */
+  header.mast{padding:40px 0 8px}
+  .mast__top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:44px}
+  .wordmark{font-weight:500;letter-spacing:-0.02em;font-size:1.0625rem;color:var(--ink)}
+  .wordmark .dot{color:var(--ink-faint)}
+  .toggle{
+    appearance:none;border:1px solid var(--hairline-strong);background:var(--surface);color:var(--ink-soft);
+    font:inherit;font-size:.8125rem;border-radius:999px;padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:7px
+  }
+  .toggle:hover{border-color:var(--ink-soft);color:var(--ink)}
+  .toggle svg{width:14px;height:14px}
+
+  .mast h1{
+    font-size:var(--step-display);font-weight:800;letter-spacing:-0.025em;line-height:1.03;
+    max-width:16ch;margin-bottom:1.5rem
+  }
+  .mast .lead{max-width:52ch;color:var(--ink-soft)}
+  .metaline{
+    margin-top:28px;display:flex;flex-wrap:wrap;gap:8px 18px;
+    font-family:"IBM Plex Mono",monospace;font-size:.75rem;color:var(--ink-faint)
+  }
+  .metaline span{white-space:nowrap}
+  .metaline span::before{content:"·";margin-right:18px;color:var(--hairline-strong)}
+  .metaline span:first-child::before{content:none}
+
+  /* ---------- sticky mini-toc ---------- */
+  nav.toc{
+    position:sticky;top:0;z-index:20;background:color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)
+  }
+  nav.toc ol{
+    list-style:none;margin:0;padding:10px 24px;max-width:var(--wide);margin:0 auto;
+    display:flex;gap:4px;overflow-x:auto;scrollbar-width:none
+  }
+  nav.toc ol::-webkit-scrollbar{display:none}
+  nav.toc a{
+    display:block;white-space:nowrap;font-family:"IBM Plex Mono",monospace;font-size:.75rem;
+    color:var(--ink-soft);text-decoration:none;padding:5px 10px;border-radius:999px
+  }
+  nav.toc a:hover{background:var(--surface-2);color:var(--ink)}
+  nav.toc a b{color:var(--accent);font-weight:400;margin-right:.5rem}
+
+  /* ---------- generic bits ---------- */
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-m)}
+  .grid{display:grid;gap:16px}
+  .two{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .callout{
+    border-left:2px solid var(--accent);padding:2px 0 2px 18px;margin:1.5rem 0;
+    color:var(--ink);font-size:1.0625rem;line-height:1.5;max-width:56ch
+  }
+  .tag{
+    display:inline-block;font-size:.75rem;border:1px solid var(--hairline-strong);
+    border-radius:999px;padding:2px 9px;color:var(--ink-soft);white-space:nowrap
+  }
+
+  ul.clean{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.6rem;max-width:var(--measure)}
+  ul.clean li{padding-left:1.1rem;position:relative}
+  ul.clean li::before{content:"";position:absolute;left:0;top:.62em;width:5px;height:5px;border-radius:1px;background:var(--accent)}
+
+  /* ---------- say / never-say ---------- */
+  .voice{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+  .voice > div{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-m);padding:18px}
+  .voice h4{margin-bottom:.75rem}
+  .voice ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.45rem;font-size:.9375rem}
+  .voice .say li::before{content:"+ ";color:var(--accent);font-family:"IBM Plex Mono",monospace}
+  .voice .nope li{color:var(--ink-soft)}
+  .voice .nope li::before{content:"– ";color:var(--ink-faint);font-family:"IBM Plex Mono",monospace}
+
+  /* ---------- color ---------- */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .sw{border:1px solid var(--hairline);border-radius:var(--r-s);overflow:hidden;background:var(--surface)}
+  .sw .chip{height:66px}
+  .sw .meta{padding:9px 11px 11px;display:flex;flex-direction:column;gap:1px}
+  .sw .meta b{font-size:.8125rem;font-weight:600}
+  .sw .meta code{font-size:.6875rem;color:var(--ink-faint)}
+  .sw .meta span{font-size:.6875rem;color:var(--ink-soft)}
+
+  /* ---------- worlds ---------- */
+  .worlds{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .world{border:1px solid var(--hairline);border-radius:var(--r-m);overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+  .world .strip{display:flex;height:60px}
+  .world .strip i{flex:1}
+  .world .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+  .world .body h4 span{color:var(--ink-faint);font-weight:400;font-size:.8125rem;margin-left:.4rem}
+  .world .kv{font-family:"IBM Plex Mono",monospace;font-size:.6875rem;color:var(--ink-soft);line-height:1.5}
+  .world .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+
+  /* ---------- type scale table ---------- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:var(--r-m)}
+  table{border-collapse:collapse;width:100%;font-size:.875rem;min-width:640px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--hairline)}
+  thead th{
+    font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+    font-weight:600;background:var(--surface-2)
+  }
+  tbody tr:last-child td{border-bottom:0}
+  td.mono,th.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+  .specimen{font-weight:800;letter-spacing:-0.02em;color:var(--ink);white-space:nowrap}
+
+  /* ---------- component demos ---------- */
+  .demo{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--r-m);padding:22px;display:flex;flex-direction:column;gap:14px}
+  .demo .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .demo .cap{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+
+  .btn{
+    appearance:none;font:inherit;font-size:.9375rem;font-weight:600;cursor:pointer;
+    height:44px;padding:0 22px;border-radius:999px;border:1px solid transparent;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .16s ease,color .16s ease,border-color .16s ease
+  }
+  .btn--primary{background:var(--ink);color:var(--paper)}
+  .btn--primary:hover{background:var(--accent);color:#fff}
+  .btn--ghost{background:transparent;border-color:var(--hairline-strong);color:var(--ink)}
+  .btn--ghost:hover{border-color:var(--ink)}
+  .field{
+    height:44px;padding:0 14px;border-radius:var(--r-s);border:1px solid var(--hairline-strong);
+    background:var(--surface);color:var(--ink);font:inherit;font-size:.9375rem;min-width:220px;flex:1
+  }
+  .field::placeholder{color:var(--ink-faint)}
+  .field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+  /* wallpaper card (gallery unit) */
+  .wcard{width:150px;border-radius:var(--r-m);overflow:hidden;border:1px solid var(--hairline);flex:none}
+  .wcard .art{aspect-ratio:9/16;position:relative;display:grid;place-items:center;padding:14px;text-align:center}
+  .wcard .art span{color:#fff;font-weight:700;font-size:.8125rem;letter-spacing:-0.01em;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+  .wcard .foot{padding:8px 10px;background:var(--surface);font-size:.6875rem;color:var(--ink-soft);display:flex;justify-content:space-between}
+
+  /* ---------- device mockups ---------- */
+  .devices{display:flex;flex-wrap:wrap;gap:32px 40px;align-items:flex-start;margin-top:8px}
+  .device{display:flex;flex-direction:column;gap:12px;align-items:center}
+  .device .note{font-size:.8125rem;color:var(--ink-soft);max-width:260px;text-align:center}
+
+  .phone{
+    width:clamp(232px,74vw,270px);aspect-ratio:1290/2796;background:var(--device);
+    border-radius:13% / 6%;padding:9px;position:relative;flex:none;
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 22px 50px -20px rgba(0,0,0,.55)
+  }
+  .screen{position:absolute;inset:9px;border-radius:11% / 5.1%;overflow:hidden;background:#000}
+  .wall{position:absolute;inset:0}
+  .wall::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.30), transparent 20%, transparent 58%, rgba(0,0,0,.42))
+  }
+  .wall--stoic{background:radial-gradient(125% 80% at 50% 4%, #2a2d33 0%, #14161a 45%, #0b0c0e 100%)}
+  .wall--soft{background:linear-gradient(175deg, #f8ebe8 0%, #f2dcdd 42%, #dabfad 100%)}
+  .wall--scripture{background:linear-gradient(180deg, #1c2540 0%, #131a2b 55%, #0d1220 100%)}
+  .wall--builder{background:radial-gradient(120% 75% at 50% 0%, #202227 0%, #131417 45%, #0a0a0b 100%)}
+
+  .island{position:absolute;top:2.4%;left:50%;transform:translateX(-50%);width:33%;height:3%;background:#000;border-radius:999px;z-index:4}
+
+  .lock{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;color:#fff}
+  .lock--dark{color:#1b1b1c}
+  .lockicon{margin-top:12%;width:15px;height:12px;border:1.6px solid currentColor;border-radius:3px;opacity:.9;position:relative}
+  .lockicon::before{content:"";position:absolute;left:2px;top:-7px;width:9px;height:8px;border:1.6px solid currentColor;border-bottom:0;border-radius:6px 6px 0 0}
+  .lock .date{margin-top:7%;font-size:.6875rem;letter-spacing:.02em;opacity:.92}
+  .lock .time{font-size:clamp(3rem,15vw,3.6rem);font-weight:300;line-height:.95;letter-spacing:-0.01em;margin-top:1%}
+  .lock .msg{
+    margin-top:auto;margin-bottom:31%;font-size:.9375rem;font-weight:600;text-align:center;
+    padding:0 13%;text-wrap:balance;line-height:1.35
+  }
+  .lock .brandtag{position:absolute;top:5.5%;left:7%;font-size:.625rem;letter-spacing:-0.01em;opacity:.62;font-weight:500}
+  .lock .idx{position:absolute;right:6%;bottom:11%;font-family:"IBM Plex Mono",monospace;font-size:.625rem;opacity:.6}
+  .lock .chev{position:absolute;left:50%;bottom:4.5%;transform:translateX(-50%);width:16px;height:16px;opacity:.7;animation:bob 2s ease-in-out infinite}
+  .lock .chev::before{content:"";position:absolute;inset:0;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg)}
+  @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,5px)}}
+
+  .lockbtns{position:absolute;left:0;right:0;bottom:8.5%;display:flex;justify-content:space-between;padding:0 12%;z-index:3}
+  .lockbtns i{width:34px;height:34px;border-radius:999px;background:rgba(130,130,130,.42);backdrop-filter:blur(3px);display:block}
+  .homebar{position:absolute;left:50%;bottom:1.6%;transform:translateX(-50%);width:33%;height:4px;border-radius:999px;background:currentColor;opacity:.9;z-index:3}
+
+  .reeldots{position:absolute;right:3.4%;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:3}
+  .reeldots i{width:4px;height:4px;border-radius:999px;background:rgba(255,255,255,.42)}
+  .reeldots i.on{background:var(--accent);height:15px}
+
+  .glasscta{
+    position:absolute;left:6%;right:6%;bottom:6.5%;height:40px;border-radius:999px;z-index:5;
+    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    color:#fff;font-size:.8125rem;font-weight:600;display:flex;align-items:center;justify-content:center
+  }
+
+  /* capture sheet */
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:6}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:7;background:var(--surface);color:var(--ink);
+    border-radius:20px 20px 0 0;padding:20px 18px 22px;display:flex;flex-direction:column;gap:11px;
+    box-shadow:0 -12px 40px -12px rgba(0,0,0,.35)
+  }
+  .sheet .grab{width:34px;height:4px;border-radius:999px;background:var(--hairline-strong);margin:0 auto 3px}
+  .sheet h4{font-size:.9375rem}
+  .sheet .subtle{font-size:.75rem;color:var(--ink-soft);margin-top:-4px}
+  .sheet .sfield{height:38px;border:1px solid var(--hairline-strong);border-radius:8px;background:var(--paper);display:flex;align-items:center;padding:0 11px;font-size:.75rem;color:var(--ink-faint)}
+  .sheet .sbtn{height:38px;border-radius:999px;background:var(--ink);color:var(--paper);font-size:.8125rem;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .sheet small{font-size:.625rem;color:var(--ink-faint);text-align:center}
+
+  /* desktop browser frame */
+  .browser{width:100%;max-width:900px;border:1px solid var(--hairline);border-radius:var(--r-m);overflow:hidden;background:var(--surface);box-shadow:0 24px 60px -28px rgba(0,0,0,.4)}
+  .browser .bar{height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--hairline);background:var(--surface-2)}
+  .browser .bar .dots{display:flex;gap:6px}
+  .browser .bar .dots i{width:10px;height:10px;border-radius:999px;background:var(--hairline-strong)}
+  .browser .bar .url{
+    margin-left:10px;font-family:"IBM Plex Mono",monospace;font-size:.6875rem;color:var(--ink-faint);
+    background:var(--paper);border:1px solid var(--hairline);border-radius:6px;padding:4px 12px
+  }
+  .split{display:grid;grid-template-columns:1fr 1fr;min-height:440px}
+  .split .left{position:relative;overflow:hidden;color:#fff;background:radial-gradient(125% 80% at 50% 4%, #2a2d33 0%, #14161a 45%, #0b0c0e 100%)}
+  .split .left .date{position:absolute;top:16%;left:0;right:0;text-align:center;font-size:.6875rem;opacity:.9}
+  .split .left .time{position:absolute;top:19%;left:0;right:0;text-align:center;font-size:2.4rem;font-weight:300;letter-spacing:-0.01em}
+  .split .left .msg{position:absolute;left:12%;right:12%;top:52%;text-align:center;font-weight:600;font-size:.9375rem;text-wrap:balance}
+  .split .left .glasscta{position:absolute;left:10%;right:auto;width:60%;bottom:8%}
+  .split .left .reeldots{right:5%}
+  .split .right{background:var(--surface);padding:20px;overflow:auto}
+  .split .right .h{font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:14px}
+  .themegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .themecard{aspect-ratio:9/16;border-radius:8px;position:relative;overflow:hidden;border:1px solid var(--hairline)}
+  .themecard b{position:absolute;left:7px;bottom:7px;font-size:.625rem;font-weight:600;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+  .tc--stoic{background:radial-gradient(120% 80% at 50% 0,#2a2d33,#0b0c0e)}
+  .tc--soft{background:linear-gradient(175deg,#f8ebe8,#dabfad)}
+  .tc--scripture{background:linear-gradient(180deg,#1c2540,#0d1220)}
+  .tc--builder{background:radial-gradient(120% 75% at 50% 0,#202227,#0a0a0b);}
+  .tc--aesthetic{background:linear-gradient(160deg,#e4def3,#dceee4 55%,#f6dde8)}
+  .tc--rebuild{background:linear-gradient(170deg,#c4cdbe,#d8b9a5)}
+  .tc--soft b,.tc--aesthetic b,.tc--rebuild b{color:#3a3a3a;text-shadow:none}
+
+  /* ---------- platform matrix ---------- */
+  .matrix{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .matrix .card{padding:16px}
+  .matrix h4{margin-bottom:.5rem}
+  .matrix p{margin:0;font-size:.875rem;color:var(--ink-soft);line-height:1.5}
+
+  footer{border-top:1px solid var(--hairline);padding:40px 0 64px;color:var(--ink-faint);font-size:.8125rem}
+  footer .wordmark{font-size:.9375rem;color:var(--ink-soft)}
+
+  @media (max-width:640px){
+    main > section{padding:44px 0}
+    .voice{grid-template-columns:1fr}
+    .mast__top{margin-bottom:32px}
+    .split{grid-template-columns:1fr}
+    .split .left{min-height:360px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  }
+</style>
+
+<header class="mast wrap">
+  <div class="mast__top">
+    <span class="wordmark">motivationalwallpaper<span class="dot">.com</span></span>
+    <button class="toggle" id="themeBtn" type="button" aria-label="Switch colour theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+      <span id="themeLabel">Theme</span>
+    </button>
+  </div>
+  <h1>Become the person your phone keeps reminding you about.</h1>
+  <p class="lead">The brand bible for motivationalwallpaper.com — the register, the words, the identity, the colour and type system, and the design of the first screen. Everything downstream — app, widget, email, SMS, community — inherits from here.</p>
+  <div class="metaline">
+    <span>motivationalwallpaper.com</span>
+    <span>domain acquired 2026 · $700</span>
+    <span>owner — Rad Okuzor</span>
+    <span>brand bible v0.1</span>
+    <span>2026-09-08</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <ol>
+    <li><a href="#positioning"><b>01</b>Positioning</a></li>
+    <li><a href="#voice"><b>02</b>Voice &amp; words</a></li>
+    <li><a href="#logo"><b>03</b>Logo</a></li>
+    <li><a href="#colour"><b>04</b>Colour</a></li>
+    <li><a href="#type"><b>05</b>Type</a></li>
+    <li><a href="#components"><b>06</b>Components</a></li>
+    <li><a href="#screen-one"><b>07</b>Screen One</a></li>
+    <li><a href="#worlds"><b>08</b>The six worlds</a></li>
+    <li><a href="#motion"><b>09</b>Motion &amp; imagery</a></li>
+    <li><a href="#platform"><b>10</b>Beyond the website</a></li>
+  </ol>
+</nav>
+
+<main class="wrap">
+
+  <!-- 01 ---------------------------------------------------------------- -->
+  <section id="positioning">
+    <p class="eyebrow"><span class="num">§01</span> Positioning</p>
+    <h2>A daily identity anchor, not a wallpaper site.</h2>
+    <div class="prose" style="margin-top:1.5rem">
+      <p class="lead">motivationalwallpaper.com is a daily identity-reinforcement system. It meets you on the one surface you already look at a hundred times a day — your lock screen — with a picture of who you're becoming, then gives you one small action each morning that proves you already are.</p>
+      <p>The wallpaper is the door. Nothing more. People don't change their wallpaper every day, so the wallpaper's only job is to capture a way to reach you and route you into the part that compounds: the widget, the notification, the text, the weekly letter, the circle. Everything in this document serves that arc — <em>open the identity gap on the screen, then close it one morning at a time.</em></p>
+    </div>
+
+    <div class="callout">Arrive: &ldquo;I'm not the person I want to be yet, and the gap is uncomfortable.&rdquo; &nbsp;→&nbsp; Stay: &ldquo;Every morning something here reminds me who I'm becoming — and I'm starting to believe it.&rdquo;</div>
+
+    <h3>What it is / isn't</h3>
+    <div class="grid two">
+      <div class="card" style="padding:18px">
+        <h4>It is</h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li>A lock-screen you look forward to seeing</li>
+          <li>One profile-matched action a day, done in 60 seconds</li>
+          <li>A quiet, private daily ritual — no audience, no metrics</li>
+          <li>Content calibrated to the specific person you're trying to become</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:18px">
+        <h4>It isn't</h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li>A wallpaper subscription or a drop platform</li>
+          <li>A generic quote app or a meditation app</li>
+          <li>A habit tracker that guilts you for missing a day</li>
+          <li>One-size-fits-all wellness</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>The gap we own</h3>
+    <p class="prose">Locket owns the phone screen but has no transformation intent. Fabulous owns habit-stacking but feels clinical and identity-generic. Calm owns the daily ritual but has no accountability and no screen presence. <strong>Nobody owns a daily visual identity anchor on the phone screen, tied to who you specifically are becoming, followed by one micro-action that proves it.</strong> The wallpaper is the entry point none of them have.</p>
+  </section>
+
+  <!-- 02 ---------------------------------------------------------------- -->
+  <section id="voice">
+    <p class="eyebrow"><span class="num">§02</span> Voice &amp; words</p>
+    <h2>The interface whispers. The wallpapers speak.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">The master brand voice is the voice of the site chrome, the capture flow, buttons, empty states, transactional email. It stays deliberately quiet so the wallpapers — and each profile's own voice — carry the intensity. The six profile voices (loud, tender, scriptural, hype) live inside the content, never in the chrome.</p>
+
+    <h3>Six principles</h3>
+    <ul class="clean">
+      <li><strong>Calm, not loud.</strong> No exclamation marks in the UI. No countdowns. The wallpaper is allowed to shout; the button is not.</li>
+      <li><strong>Second person, present tense.</strong> &ldquo;Here's yours.&rdquo; &ldquo;Set it and go.&rdquo; You're talking to one person holding a phone.</li>
+      <li><strong>Shorter than feels comfortable.</strong> Three words beats a sentence. A sentence beats two.</li>
+      <li><strong>Concrete over aspirational.</strong> &ldquo;Sent to your phone&rdquo; — not &ldquo;unlock your potential.&rdquo;</li>
+      <li><strong>Never guilt.</strong> The midday check-in is a high-five, not a scold. A missed day is met with &ldquo;pick it back up,&rdquo; never &ldquo;you broke your streak.&rdquo;</li>
+      <li><strong>Respect their intelligence.</strong> They've seen every growth-hack landing page. Don't write another one.</li>
+    </ul>
+
+    <h3>Master word list</h3>
+    <p class="fine prose">Applies to chrome only. Each profile has its own say / never-say list in <a href="#worlds">§08</a> — and those override this one inside profile content.</p>
+    <div class="voice" style="margin-top:1rem">
+      <div class="say">
+        <h4>Say</h4>
+        <ul>
+          <li>become · becoming</li>
+          <li>one morning at a time</li>
+          <li>your lock screen</li>
+          <li>here's yours</li>
+          <li>you showed up</li>
+          <li>proof · already</li>
+          <li>quiet · private</li>
+          <li>send it to my phone</li>
+        </ul>
+      </div>
+      <div class="nope">
+        <h4>Never say</h4>
+        <ul>
+          <li>unlock your potential</li>
+          <li>hustle harder · crush it · 10x</li>
+          <li>new you · new year new me</li>
+          <li>life-changing · game-changer</li>
+          <li>limited time · don't miss out</li>
+          <li>transform (aimed at the visitor)</li>
+          <li>journey (as filler)</li>
+          <li>sign up / register / create account</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Voice in place</h3>
+    <div class="grid two" style="margin-top:1rem">
+      <div class="card" style="padding:16px">
+        <p class="cap fine-faint" style="letter-spacing:.1em;text-transform:uppercase">Capture prompt</p>
+        <p style="margin:.4rem 0 0">&ldquo;Where should we send it?&rdquo;<br><span class="fine">No account. No spam. Just the wallpaper.</span></p>
+      </div>
+      <div class="card" style="padding:16px">
+        <p class="cap fine-faint" style="letter-spacing:.1em;text-transform:uppercase">Confirmation</p>
+        <p style="margin:.4rem 0 0">&ldquo;It's in your inbox.&rdquo;<br><span class="fine">Two quick questions so tomorrow's fits you better.</span></p>
+      </div>
+      <div class="card" style="padding:16px">
+        <p class="cap fine-faint" style="letter-spacing:.1em;text-transform:uppercase">Primary button</p>
+        <p style="margin:.4rem 0 0">Send it to my phone</p>
+      </div>
+      <div class="card" style="padding:16px">
+        <p class="cap fine-faint" style="letter-spacing:.1em;text-transform:uppercase">Missed-day notification</p>
+        <p style="margin:.4rem 0 0">&ldquo;Yesterday got away. Today's still here.&rdquo;</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 ---------------------------------------------------------------- -->
+  <section id="logo">
+    <p class="eyebrow"><span class="num">§03</span> Logo &amp; wordmark</p>
+    <h2>One lowercase word, set quietly.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">The name is a URL people already type and already rank for. The mark leans into that: one word, all lowercase, no icon required. Lowercase signals the register — personal, calm, not a corporation. One unbroken word signals it's a name, not a description.</p>
+
+    <div class="card" style="padding:40px 24px;margin-top:1.5rem;display:flex;flex-direction:column;gap:28px;align-items:flex-start">
+      <span style="font-weight:500;letter-spacing:-0.02em;font-size:clamp(1.25rem,5vw,1.9rem);color:var(--ink)">motivationalwallpaper<span style="color:var(--ink-faint)">.com</span></span>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        <span style="width:52px;height:52px;border-radius:14px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:600;letter-spacing:-0.03em;font-size:1.1rem">mw</span>
+        <span style="width:52px;height:52px;border-radius:14px;border:1px solid var(--hairline-strong);display:grid;place-items:center">
+          <span style="width:17px;height:14px;border:2px solid var(--ink);border-radius:3px;position:relative;display:block">
+            <span style="position:absolute;left:2px;top:-9px;width:11px;height:10px;border:2px solid var(--ink);border-bottom:0;border-radius:7px 7px 0 0;border-right-color:transparent;transform:rotate(-8deg)"></span>
+          </span>
+        </span>
+        <span class="fine">Monogram for app icons &amp; avatars · optional open-shackle lock mark — the shackle never closes; that's the gap</span>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:1.25rem">
+      <div class="card" style="padding:18px">
+        <h4>Rules</h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li>Wordmark: Schibsted Grotesk Medium (500), tracking −0.02em, always lowercase</li>
+          <li><code>.com</code> optional, always in <code>--ink-faint</code>, never bolder than the name</li>
+          <li>Clear space on all sides = the height of the &ldquo;m&rdquo;</li>
+          <li>Minimum width 120px on screen; monogram down to 16px</li>
+          <li>On a wallpaper: only over a scrim, at 60–70% opacity, top-left</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:18px">
+        <h4>Never</h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li>No gradient, glow, bevel or drop shadow</li>
+          <li>No Title Case, no ALL CAPS, no spaces between the words</li>
+          <li>Don't set it in a serif or a script face</li>
+          <li>Don't stretch, condense or outline it</li>
+          <li>Don't place it unscrimmed on busy imagery</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 ---------------------------------------------------------------- -->
+  <section id="colour">
+    <p class="eyebrow"><span class="num">§04</span> Colour</p>
+    <h2>Warm paper, near-black ink, a trace of brass.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">The chrome palette is almost monochrome on purpose. Neutrals are warm — bone, not blue-grey — so the interface feels like paper rather than software. One accent, a muted brass, appears only as a trace: the active scroll marker, a focus ring, a link, the primary button on hover. If brass covers more than about 5% of any view, pull it back.</p>
+
+    <h3>Chrome — light</h3>
+    <div class="swatches" style="margin-top:1rem">
+      <div class="sw"><div class="chip" style="background:#FAF9F7"></div><div class="meta"><b>Paper</b><code>#FAF9F7</code><span>page ground</span></div></div>
+      <div class="sw"><div class="chip" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px #E6E3DC"></div><div class="meta"><b>Surface</b><code>#FFFFFF</code><span>cards, frames, sheets</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F2F0EB"></div><div class="meta"><b>Surface&nbsp;2</b><code>#F2F0EB</code><span>wells, table headers</span></div></div>
+      <div class="sw"><div class="chip" style="background:#17181B"></div><div class="meta"><b>Ink</b><code>#17181B</code><span>text, primary button</span></div></div>
+      <div class="sw"><div class="chip" style="background:#57565A"></div><div class="meta"><b>Ink&nbsp;soft</b><code>#57565A</code><span>secondary text</span></div></div>
+      <div class="sw"><div class="chip" style="background:#8A8A8E"></div><div class="meta"><b>Ink&nbsp;faint</b><code>#8A8A8E</code><span>meta, placeholder</span></div></div>
+      <div class="sw"><div class="chip" style="background:#E6E3DC"></div><div class="meta"><b>Hairline</b><code>#E6E3DC</code><span>1px dividers</span></div></div>
+      <div class="sw"><div class="chip" style="background:#8F7142"></div><div class="meta"><b>Accent</b><code>#8F7142</code><span>brass — trace only</span></div></div>
+      <div class="sw"><div class="chip" style="background:#EFE7D8"></div><div class="meta"><b>Accent&nbsp;soft</b><code>#EFE7D8</code><span>focus glow, wash</span></div></div>
+    </div>
+
+    <h3>Chrome — dark</h3>
+    <div class="swatches" style="margin-top:1rem">
+      <div class="sw"><div class="chip" style="background:#101013"></div><div class="meta"><b>Paper</b><code>#101013</code><span>page ground</span></div></div>
+      <div class="sw"><div class="chip" style="background:#17181C"></div><div class="meta"><b>Surface</b><code>#17181C</code><span>cards, frames, sheets</span></div></div>
+      <div class="sw"><div class="chip" style="background:#1E1F24"></div><div class="meta"><b>Surface&nbsp;2</b><code>#1E1F24</code><span>wells, table headers</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F1F0EA"></div><div class="meta"><b>Ink</b><code>#F1F0EA</code><span>text</span></div></div>
+      <div class="sw"><div class="chip" style="background:#A2A1A6"></div><div class="meta"><b>Ink&nbsp;soft</b><code>#A2A1A6</code><span>secondary text</span></div></div>
+      <div class="sw"><div class="chip" style="background:#2A2B30"></div><div class="meta"><b>Hairline</b><code>#2A2B30</code><span>1px dividers</span></div></div>
+      <div class="sw"><div class="chip" style="background:#C7A56D"></div><div class="meta"><b>Accent</b><code>#C7A56D</code><span>brass — brighter on dark</span></div></div>
+      <div class="sw"><div class="chip" style="background:#221F18"></div><div class="meta"><b>Accent&nbsp;soft</b><code>#221F18</code><span>focus glow, wash</span></div></div>
+    </div>
+
+    <div class="callout" style="margin-top:2rem">The chrome palette and the six world palettes never mix. Brass is the only colour the interface owns. Every hue in <a href="#worlds">§08</a> lives strictly inside wallpaper art, profile emails and profile widget skins — never on a button, a link or a nav.</div>
+
+    <h3>Semantic colour</h3>
+    <p class="prose fine">Reserved for the app's streak and check-in surfaces only — never the marketing site. Success <code>#4E7A56</code> / attention <code>#B08643</code> / rest-day <code>--ink-faint</code>. These are not accents and never carry brand weight.</p>
+  </section>
+
+  <!-- 05 ---------------------------------------------------------------- -->
+  <section id="type">
+    <p class="eyebrow"><span class="num">§05</span> Typography</p>
+    <h2>Schibsted Grotesk, and nothing it doesn't need.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">One text family carries the whole interface. Schibsted Grotesk has enough character in its heavy weights to hold a headline and stays calm at reading size — it isn't the default grotesk everyone reaches for. IBM Plex Mono handles anything that is data: specs, hex values, the lock-screen clock's siblings, timestamps. No serif, no display face. Hierarchy comes from weight, size and tracking.</p>
+
+    <div class="tablewrap" style="margin-top:1.5rem">
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Specimen</th><th class="mono">Size</th><th class="mono">Weight</th><th class="mono">Track</th><th class="mono">Leading</th><th>Use</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Display</td><td><span class="specimen" style="font-size:1.6rem">Becoming</span></td><td class="mono">46 / 2.875r</td><td class="mono">800</td><td class="mono">−0.025em</td><td class="mono">1.03</td><td>hero, screen headlines <span class="fine-faint">(30 on mobile)</span></td></tr>
+          <tr><td>Title 1</td><td><span class="specimen" style="font-size:1.3rem;font-weight:700">Section title</span></td><td class="mono">28 / 1.75r</td><td class="mono">700</td><td class="mono">−0.015em</td><td class="mono">1.15</td><td>section headings</td></tr>
+          <tr><td>Title 2</td><td><span class="specimen" style="font-size:1.05rem;font-weight:600">Sub-section</span></td><td class="mono">20 / 1.25r</td><td class="mono">600</td><td class="mono">−0.01em</td><td class="mono">1.3</td><td>sub-heads, modal titles</td></tr>
+          <tr><td>Lead</td><td><span style="font-size:1rem">Intro paragraph</span></td><td class="mono">18 / 1.125r</td><td class="mono">400</td><td class="mono">0</td><td class="mono">1.55</td><td>opening paragraph of a section</td></tr>
+          <tr><td>Body</td><td><span style="font-size:.9375rem">Default running text</span></td><td class="mono">16 / 1r</td><td class="mono">400</td><td class="mono">0</td><td class="mono">1.6</td><td>everything, buttons</td></tr>
+          <tr><td>Small</td><td><span style="font-size:.85rem">Caption / helper</span></td><td class="mono">14 / 0.875r</td><td class="mono">400</td><td class="mono">0</td><td class="mono">1.5</td><td>captions, microcopy</td></tr>
+          <tr><td>Label</td><td><span style="font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Eyebrow</span></td><td class="mono">12 / 0.75r</td><td class="mono">600</td><td class="mono">+0.12em</td><td class="mono">1</td><td>eyebrows, tags, nav, table heads</td></tr>
+          <tr><td>Mono</td><td><span class="mono" style="font-size:.8rem">9:41 · #17181B</span></td><td class="mono">13 / 0.8125r</td><td class="mono">400</td><td class="mono">0</td><td class="mono">1.5</td><td>specs, code, data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine prose" style="margin-top:1rem">The lock-screen clock itself is the one exception to the scale: it follows iOS, set in the device's own system face at ~300 weight. Wallpaper message type is set in each world's display face (<a href="#worlds">§08</a>), never in Schibsted Grotesk — the chrome font must never appear <em>on</em> a wallpaper.</p>
+  </section>
+
+  <!-- 06 ---------------------------------------------------------------- -->
+  <section id="components">
+    <p class="eyebrow"><span class="num">§06</span> Core components</p>
+    <h2>Few parts, each doing one job.</h2>
+
+    <div class="grid" style="margin-top:1.5rem;gap:20px">
+      <div class="demo">
+        <span class="cap">Buttons — 44px tall, fully rounded</span>
+        <div class="row">
+          <button class="btn btn--primary" type="button">Send it to my phone</button>
+          <button class="btn btn--ghost" type="button">Browse themes</button>
+        </div>
+        <p class="fine">Primary rests on <code>--ink</code>, fills with brass on hover — the only place brass touches a solid surface. Ghost for secondary. One primary per view. Never two brass buttons in frame.</p>
+      </div>
+
+      <div class="demo">
+        <span class="cap">Email capture field</span>
+        <div class="row">
+          <input class="field" type="email" placeholder="you@email.com" aria-label="Email address (demo)">
+          <button class="btn btn--primary" type="button">Send my wallpaper</button>
+        </div>
+        <p class="fine">Focus draws a 3px <code>--accent-soft</code> glow and a brass border. Label sits above in real use; placeholder is an example address, never instructions.</p>
+      </div>
+
+      <div class="demo">
+        <span class="cap">Capture sheet — rises from the bottom on mobile, centred modal ≥900px</span>
+        <div style="max-width:340px;border:1px solid var(--hairline);border-radius:16px 16px 0 0;background:var(--surface);padding:20px 18px;display:flex;flex-direction:column;gap:11px">
+          <span style="width:34px;height:4px;border-radius:999px;background:var(--hairline-strong);align-self:center"></span>
+          <h4>Where should we send it?</h4>
+          <p class="fine" style="margin-top:-6px">Your wallpaper lands in your inbox in a few seconds.</p>
+          <input class="field" type="email" placeholder="you@email.com" aria-label="Email address (demo 2)" style="min-width:0">
+          <button class="btn btn--primary" type="button" style="width:100%">Send my wallpaper</button>
+          <small class="fine-faint" style="text-align:center">No account. No spam. Just the wallpaper.</small>
+        </div>
+      </div>
+
+      <div class="demo">
+        <span class="cap">Wallpaper card — gallery / desktop theme grid</span>
+        <div class="row" style="align-items:stretch">
+          <div class="wcard"><div class="art wall--stoic"><span>The work is the point.</span></div><div class="foot"><span>Stoic</span><span>1290×2796</span></div></div>
+          <div class="wcard"><div class="art wall--soft"><span style="color:#3a3a3a;text-shadow:none">You&nbsp;are&nbsp;allowed to&nbsp;begin&nbsp;again.</span></div><div class="foot"><span>Soft&nbsp;Life</span><span>1290×2796</span></div></div>
+          <div class="wcard"><div class="art wall--scripture"><span>Be still. He has you.</span></div><div class="foot"><span>Scripture</span><span>1290×2796</span></div></div>
+        </div>
+        <p class="fine">One line of ≤6 words in the world's display face, centred in the safe band, on a top-and-bottom scrim so the iOS clock still reads. Foot strip carries theme + export size only — no like counts, no author.</p>
+      </div>
+
+      <div class="demo">
+        <span class="cap">Scroll indicator</span>
+        <div class="row" style="gap:28px">
+          <span style="display:flex;flex-direction:column;gap:6px">
+            <i style="width:5px;height:5px;border-radius:999px;background:var(--hairline-strong);display:block"></i>
+            <i style="width:5px;height:16px;border-radius:999px;background:var(--accent);display:block"></i>
+            <i style="width:5px;height:5px;border-radius:999px;background:var(--hairline-strong);display:block"></i>
+            <i style="width:5px;height:5px;border-radius:999px;background:var(--hairline-strong);display:block"></i>
+          </span>
+          <p class="fine" style="margin:0">Desktop only, inside the left panel. Active mark is brass and elongated. On mobile the scroll itself is the affordance — replaced by a mono index <code>03 / ∞</code> bottom-right.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 ---------------------------------------------------------------- -->
+  <section id="screen-one">
+    <p class="eyebrow"><span class="num">§07</span> Screen One</p>
+    <h2>The first thing they see is their own potential lock screen.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">No hero copy, no nav bar, no cookie banner in the way. The page opens <em>as</em> a lock screen — a full-bleed wallpaper with the real iOS overlay on top — and invites a TikTok scroll to the next one. One job on this screen: feel something, then send it to your phone.</p>
+
+    <div class="devices">
+      <div class="device">
+        <div class="phone">
+          <div class="island"></div>
+          <div class="screen">
+            <div class="wall wall--stoic"></div>
+            <div class="lock">
+              <span class="brandtag">motivationalwallpaper</span>
+              <span class="lockicon"></span>
+              <span class="date">Monday, September 8</span>
+              <span class="time">9:41</span>
+              <span class="msg">The work is the point.</span>
+              <span class="idx">01 / &#8734;</span>
+              <span class="chev" aria-hidden="true"></span>
+            </div>
+            <div class="lockbtns"><i></i><i></i></div>
+            <span class="homebar" style="color:#fff"></span>
+            <div class="glasscta">Send it to my phone</div>
+          </div>
+        </div>
+        <p class="note">Load state, mobile. Full-bleed wallpaper + iOS overlay. Wordmark at 62% top-left, a soft chevron hinting the scroll (fades for good after the first swipe), persistent glass CTA over a bottom scrim.</p>
+      </div>
+
+      <div class="device">
+        <div class="phone">
+          <div class="island"></div>
+          <div class="screen">
+            <div class="wall wall--stoic"></div>
+            <div class="lock" style="filter:brightness(.7)">
+              <span class="lockicon"></span>
+              <span class="date">Monday, September 8</span>
+              <span class="time">9:41</span>
+            </div>
+            <div class="dim"></div>
+            <div class="sheet">
+              <span class="grab"></span>
+              <h4>Where should we send it?</h4>
+              <p class="subtle">Lands in your inbox in a few seconds.</p>
+              <span class="sfield">you@email.com</span>
+              <span class="sbtn">Send my wallpaper</span>
+              <small>No account. No spam. Just the wallpaper.</small>
+            </div>
+          </div>
+        </div>
+        <p class="note">Capture state. Tapping the wallpaper or the CTA raises the sheet from the bottom; wallpaper dims behind it. On submit it becomes &ldquo;It's in your inbox&rdquo; and the 3-question profile quiz begins inline.</p>
+      </div>
+    </div>
+
+    <h3>Desktop — a 50 / 50 split</h3>
+    <div style="display:flex;justify-content:center;margin-top:1rem">
+      <div class="browser">
+        <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">motivationalwallpaper.com</span></div>
+        <div class="split">
+          <div class="left">
+            <span class="date">Monday, September 8</span>
+            <span class="time">9:41</span>
+            <span class="msg">The work is the point.</span>
+            <span class="reeldots"><i></i><i class="on"></i><i></i><i></i></span>
+            <span class="glasscta">Send it to my phone</span>
+          </div>
+          <div class="right">
+            <p class="h">Browse by theme</p>
+            <div class="themegrid">
+              <div class="themecard tc--stoic"><b>Stoic</b></div>
+              <div class="themecard tc--soft"><b>Soft Life</b></div>
+              <div class="themecard tc--scripture"><b>Scripture</b></div>
+              <div class="themecard tc--builder"><b>Builder</b></div>
+              <div class="themecard tc--aesthetic"><b>Aesthetic</b></div>
+              <div class="themecard tc--rebuild"><b>Rebuild</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:1.75rem">
+      <div class="card" style="padding:18px">
+        <h4>Mobile behaviour <span class="fine-faint">&lt; 900px</span></h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li><code>100dvh</code> panels, <code>scroll-snap-type: y mandatory</code> — one wallpaper per panel</li>
+          <li>Panel 1 fully above the fold on load; only the wordmark + chevron sit over it</li>
+          <li>CTA pill is pinned and never scrolls away; 120px bottom scrim behind it</li>
+          <li>Tap wallpaper <em>or</em> CTA → capture sheet at 60% height</li>
+          <li>The reel alternates opposite worlds — Stoic, then Soft Life, then Scripture — so anyone sees themselves within two swipes</li>
+          <li>Mono index <code>01 / ∞</code> bottom-right in place of dots</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:18px">
+        <h4>Desktop behaviour <span class="fine-faint">≥ 900px</span></h4>
+        <ul class="clean" style="margin-top:.75rem">
+          <li>Viewport-height split, the page itself doesn't scroll on this screen</li>
+          <li>Left 50%: the same snap-scroll wallpaper reel, contained, with vertical brass dots on its inner edge and the CTA pinned bottom-left</li>
+          <li>Right 50%: <code>--surface</code> ground, &ldquo;Browse by theme&rdquo;, a 3-column card grid of the worlds</li>
+          <li>Hovering a theme card cross-fades the left reel to that world (260ms); clicking scrolls the reel into it</li>
+          <li>Right panel scrolls internally if themes overflow; left panel stays put</li>
+          <li>720–900px: mobile layout with wider gutters</li>
+        </ul>
+      </div>
+    </div>
+    <p class="fine prose" style="margin-top:1rem">The clock reads <code>9:41</code> everywhere by convention — the time Apple sets every device to in product shots. Keep it. It reads as &ldquo;phone&rdquo; instantly and no one questions it.</p>
+  </section>
+
+  <!-- 08 ---------------------------------------------------------------- -->
+  <section id="worlds">
+    <p class="eyebrow"><span class="num">§08</span> The six worlds</p>
+    <h2>One chrome. Six aesthetic worlds inside it.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">Each preset profile from the audience work gets a self-contained visual world: a palette, a surface texture, a display face and a voice. Worlds appear in wallpaper art, profile-segmented email, and the profile's widget skin. They never touch the chrome — no world colour on a button, a link or the nav. A visitor is routed to one world by the 3-question quiz after capture; until then the reel simply alternates them.</p>
+
+    <div class="worlds" style="margin-top:1.5rem">
+      <div class="world">
+        <div class="strip"><i style="background:#0C0D0F"></i><i style="background:#3A3F45"></i><i style="background:#C9C6BE"></i></div>
+        <div class="body">
+          <h4>Stoic <span>· Marcus, 24 — resolve</span></h4>
+          <p class="kv">obsidian #0C0D0F · steel #3A3F45 · bone #C9C6BE<br>matte concrete grain · condensed caps display</p>
+          <div class="tags"><span class="tag">forged</span><span class="tag">locked in</span><span class="tag">earned</span><span class="tag">no one's watching</span></div>
+        </div>
+      </div>
+
+      <div class="world">
+        <div class="strip"><i style="background:#F3D9DA"></i><i style="background:#FBF4EC"></i><i style="background:#C9AE97"></i></div>
+        <div class="body">
+          <h4>Soft Life <span>· Sarah, 19 — possibility</span></h4>
+          <p class="kv">blush #F3D9DA · cream #FBF4EC · warm taupe #C9AE97<br>soft paper grain · light humanist display</p>
+          <div class="tags"><span class="tag">bloom</span><span class="tag">era</span><span class="tag">intentional</span><span class="tag">becoming</span></div>
+        </div>
+      </div>
+
+      <div class="world">
+        <div class="strip"><i style="background:#131A2B"></i><i style="background:#EFE7D3"></i><i style="background:#B8924A"></i></div>
+        <div class="body">
+          <h4>Scripture <span>· Pastor James, 42 — steadiness</span></h4>
+          <p class="kv">deep navy #131A2B · parchment #EFE7D3 · gold leaf #B8924A<br>linen texture, gilt edge · transitional serif display</p>
+          <div class="tags"><span class="tag">the Word</span><span class="tag">carry</span><span class="tag">stand</span><span class="tag">armor</span></div>
+        </div>
+      </div>
+
+      <div class="world">
+        <div class="strip"><i style="background:#0A0A0A"></i><i style="background:#16181C"></i><i style="background:#C79A3E"></i></div>
+        <div class="body">
+          <h4>Builder <span>· Jerome, 28 — momentum</span></h4>
+          <p class="kv">black #0A0A0A · ink #16181C · gold #C79A3E<br>carbon fibre, thin rule · tight grotesk display</p>
+          <div class="tags"><span class="tag">build</span><span class="tag">execute</span><span class="tag">next chapter</span><span class="tag">in silence</span></div>
+        </div>
+      </div>
+
+      <div class="world">
+        <div class="strip"><i style="background:#E4DEF3"></i><i style="background:#DCEEE4"></i><i style="background:#F6DDE8"></i></div>
+        <div class="body">
+          <h4>Aesthetic <span>· Grace, 16 — ease</span></h4>
+          <p class="kv">lilac #E4DEF3 · mint #DCEEE4 · petal #F6DDE8<br>soft gradient mesh · rounded sans display</p>
+          <div class="tags"><span class="tag">vibe</span><span class="tag">glow</span><span class="tag">cozy</span><span class="tag">it's giving</span></div>
+        </div>
+      </div>
+
+      <div class="world">
+        <div class="strip"><i style="background:#C4CDBE"></i><i style="background:#D8B9A5"></i><i style="background:#F4EFE8"></i></div>
+        <div class="body">
+          <h4>Rebuild <span>· Diane, 34 — strength</span></h4>
+          <p class="kv">sage #C4CDBE · clay #D8B9A5 · warm white #F4EFE8<br>watercolour wash · quiet old-style serif display</p>
+          <div class="tags"><span class="tag">carried</span><span class="tag">grace</span><span class="tag">still here</span><span class="tag">rebuild</span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="fine prose" style="margin-top:1.25rem">Grace won't pay — but she's the organic engine, so her world gets the same craft as any other. Her mother is Diane; her older sister is Sarah. Design for the share.</p>
+  </section>
+
+  <!-- 09 ---------------------------------------------------------------- -->
+  <section id="motion">
+    <p class="eyebrow"><span class="num">§09</span> Motion &amp; imagery</p>
+    <h2>Motion you feel, not motion you watch.</h2>
+
+    <h3>Motion</h3>
+    <div class="tablewrap" style="margin-top:1rem">
+      <table>
+        <thead><tr><th>Moment</th><th class="mono">Duration</th><th class="mono">Curve</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Scroll between wallpapers</td><td class="mono">OS native</td><td class="mono">y mandatory snap</td><td>only the incoming message animates: opacity 0→1, scale 1.02→1</td></tr>
+          <tr><td>Message settle</td><td class="mono">400ms</td><td class="mono">ease-out</td><td>runs once per panel as it lands</td></tr>
+          <tr><td>Scroll-hint chevron</td><td class="mono">2s loop</td><td class="mono">ease-in-out</td><td>6px bob; removed permanently after first scroll event</td></tr>
+          <tr><td>Capture sheet rise</td><td class="mono">320ms</td><td class="mono">cubic-bezier(.32,.72,0,1)</td><td>backdrop fades 200ms linear</td></tr>
+          <tr><td>Theme card → left reel</td><td class="mono">260ms</td><td class="mono">ease</td><td>cross-fade only, no slide</td></tr>
+          <tr><td>&ldquo;It's in your inbox&rdquo;</td><td class="mono">200ms</td><td class="mono">ease-out</td><td>single 0.98 scale pulse on the phone image</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine prose" style="margin-top:1rem"><code>prefers-reduced-motion</code>: no bob, no scale, no pulse. The sheet appears with a 120ms fade; snap scrolling stays — it's navigation, not decoration.</p>
+
+    <h3>Wallpaper art direction</h3>
+    <ul class="clean">
+      <li>Export at 1290×2796 (iPhone 15/16 Pro), safe down to 1170×2532. Ship @3x.</li>
+      <li>Safe zones: nothing essential in the top 320px (clock &amp; date) or bottom 200px (buttons &amp; home bar). The centre 1000px band is the message zone.</li>
+      <li>Type &amp; texture only — no stock sunrises, mountains, lone wolves or motivational-poster photography. The texture is the differentiator between worlds.</li>
+      <li>One line, ≤6 words, in the world's display face — never the chrome font.</li>
+      <li>Always a 0–35% vertical scrim top and bottom so the iOS overlay holds on any wallpaper.</li>
+      <li>Every wallpaper ships with a matching 1080×1920 share-card crop, wordmark centred at the bottom.</li>
+    </ul>
+  </section>
+
+  <!-- 10 ---------------------------------------------------------------- -->
+  <section id="platform">
+    <p class="eyebrow"><span class="num">§10</span> Beyond the website</p>
+    <h2>The chrome is constant. The world skins the content.</h2>
+    <p class="lead prose" style="margin-top:1.25rem">Every surface after the website inherits the same rule: Schibsted Grotesk + IBM Plex Mono, warm neutrals, brass as a trace. The user's profile world colours only the content inside — the affirmation, the quote card, the circle badge.</p>
+
+    <div class="matrix" style="margin-top:1.5rem">
+      <div class="card"><h4>Home-screen widget</h4><p>Neutral card, chrome type. The affirmation text is tinted in the user's world colour. Streak count in semantic colour. Like + share are two hairline glyphs, nothing more.</p></div>
+      <div class="card"><h4>Push notifications</h4><p>Plain system styling. Body copy in the profile voice, not the chrome voice. Swipe actions: heart to save, share to generate the branded card.</p></div>
+      <div class="card"><h4>SMS</h4><p>No branding at all. Pure text, under 5 seconds to read, no link, no CTA. The restraint <em>is</em> the brand on this channel.</p></div>
+      <div class="card"><h4>Email — Beehiiv</h4><p>Chrome layout: warm paper, one column, wordmark in the footer. One designed quote card per send, in the world palette. Segmented by profile.</p></div>
+      <div class="card"><h4>Community — Skool</h4><p>Wordmark + neutral shell. Each profile circle carries its world's 3-colour strip as its only decoration. No public like counts, ever.</p></div>
+      <div class="card"><h4>Share card</h4><p>The one artefact that leaves the system. World-palette background, quote in the world display face, <code>motivationalwallpaper.com</code> small and centred at the bottom. Never a screenshot.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p class="wordmark">motivationalwallpaper<span style="color:var(--ink-faint)">.com</span></p>
+  <p style="margin:.5rem 0 0">Brand bible v0.1 — 2026-09-08 · living document · owner Rad Okuzor</p>
+  <p style="margin:.25rem 0 0">Next: profile quiz screen, gallery / browse, profile home, the widget and email templates.</p>
+</footer>
+
+<script>
+  (function(){
+    var root = document.documentElement, btn = document.getElementById('themeBtn'), label = document.getElementById('themeLabel');
+    var stored = null;
+    try { stored = localStorage.getItem('mw-theme'); } catch(e){}
+    if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+    function sync(){
+      var explicit = root.getAttribute('data-theme');
+      var dark = explicit ? explicit === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      label.textContent = dark ? 'Light' : 'Dark';
+    }
+    sync();
+    btn.addEventListener('click', function(){
+      var explicit = root.getAttribute('data-theme');
+      var dark = explicit ? explicit === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('mw-theme', next); } catch(e){}
+      sync();
+    });
+    try {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', sync);
+    } catch(e){}
+  })();
+</script>

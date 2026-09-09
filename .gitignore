@@ -1,0 +1,24 @@
+# build output
+dist/
+.output/
+
+# dependencies
+node_modules/
+
+# astro
+.astro/
+
+# env
+.env
+.env.production
+.env.local
+.env.*.local
+
+# logs / os
+npm-debug.log*
+*.log
+.DS_Store
+
+# firebase service-account keys
+*firebase-adminsdk*.json
+.vercel/

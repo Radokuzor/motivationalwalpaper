@@ -1,0 +1,15 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "21st"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(echo \"npm: $\\(npm -v\\)\")",
+      "Bash(command -v nvm)",
+      "Read(//home/rad/**)",
+      "Bash(bash -lc 'nvm --version')"
+    ]
+  }
+}

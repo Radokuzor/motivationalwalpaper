@@ -1,0 +1,70 @@
+---
+/**
+ * Screen One (brand bible §07). The page opens AS an iOS lock screen: a
+ * full-bleed wallpaper reel with the real overlay on top, a pinned "Send it to
+ * my phone" CTA, and — on desktop — a browse-by-theme grid on the right.
+ *
+ * This page is only an orchestrator: Reel, ThemeGrid and CaptureSheet talk
+ * through CustomEvents (src/scripts/events); nothing imports anything else.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Reel from '../components/Reel.astro';
+import ThemeGrid from '../components/ThemeGrid.astro';
+import CaptureSheet from '../components/CaptureSheet.astro';
+
+const title = 'motivationalwallpaper — a lock screen you look forward to seeing';
+const description =
+  'A daily identity anchor for your phone. Pick a look that feels like who you are becoming, and we send it to your lock screen.';
+---
+
+<BaseLayout title={title} description={description} bodyClass="screen-one">
+  <h1 class="sr-only">
+    motivationalwallpaper — a lock screen you look forward to seeing. Join the
+    community.
+  </h1>
+
+  <div class="app">
+    <Reel />
+    <ThemeGrid />
+    <CaptureSheet />
+  </div>
+</BaseLayout>
+
+<style>
+  :global(body.screen-one) {
+    overflow: hidden;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+  }
+
+  @media (min-width: 900px) {
+    .app {
+      display: flex;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    .app :global(.reel-frame) {
+      flex: 0 0 50%;
+      width: 50%;
+      height: 100dvh;
+    }
+    .app :global(.browse) {
+      flex: 0 0 50%;
+      width: 50%;
+    }
+  }
+</style>
+
+<script>
+  import { MW, on } from '../scripts/events';
+
+  // The whole flow (reel -> CTA -> capture -> quiz) is self-wiring via events.
+  // This is the one seam left for later: routing to the profile home.
+  on(MW.quizComplete, (detail) => {
+    // TODO: redirect to `/home?profile=${detail.profile}` once profile home exists.
+    void detail;
+  });
+</script>

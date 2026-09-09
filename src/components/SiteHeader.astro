@@ -1,0 +1,27 @@
+---
+/**
+ * SiteHeader — the quiet chrome header for content pages (not Screen One).
+ * Wordmark only; the interface whispers.
+ */
+import Wordmark from './Wordmark.astro';
+---
+
+<header class="site-header">
+  <a href="/" class="site-header__home" aria-label="motivationalwallpaper home">
+    <Wordmark size="1.0625rem" dotCom />
+  </a>
+</header>
+
+<style>
+  .site-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .site-header__home {
+    text-decoration: none;
+    display: inline-block;
+  }
+  .site-header__home:hover :global(.wordmark) {
+    color: var(--ink);
+  }
+</style>

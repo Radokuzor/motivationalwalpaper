@@ -1,0 +1,497 @@
+---
+/**
+ * Quiz — the inline confirmation + profile survey that replaces the capture form
+ * after the visitor submits contact details (brand bible §07, doc 02).
+ *
+ * Three steps, one screen at a time, no progress bar / skip / back. Foot dots
+ * light up as the visitor advances; each step dissolves into the next.
+ *   1 — age + gender on one page (auto-advances once both are picked)
+ *   2 — "where are you in life right now" (single pick)
+ *   3 — "who inspires you most" figure grid (pick two, then Continue)
+ * Answers are tallied to a profile and logged; no real routing in this prototype.
+ *
+ *  - listens mw:capture-submit  -> start at step 1
+ *  - emits   mw:quiz-complete   -> { answers, profile, world }
+ */
+import { QUIZ_COPY } from '../data/quiz';
+---
+
+<section class="view-quiz" id="mw-quiz" hidden aria-live="polite">
+  <div id="mw-quiz-head">
+    <h2 tabindex="-1">{QUIZ_COPY.confirmHeading}</h2>
+    <p class="helper">{QUIZ_COPY.confirmSub}</p>
+  </div>
+  <div id="mw-quiz-host"></div>
+  <div id="mw-quiz-done" hidden>
+    <h2 tabindex="-1">{QUIZ_COPY.doneHeading}</h2>
+    <p class="helper">{QUIZ_COPY.doneSub}</p>
+  </div>
+</section>
+
+<style>
+  .view-quiz {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .view-quiz h2 {
+    margin: 0;
+    font-size: var(--t-title2-size);
+    font-weight: var(--t-title2-weight);
+    letter-spacing: var(--t-title2-track);
+    line-height: var(--t-title2-leading);
+    text-wrap: balance;
+  }
+  .view-quiz h2:focus {
+    outline: none;
+  }
+  .helper {
+    margin: 0;
+    font-size: var(--t-small-size);
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  #mw-quiz-host {
+    margin-top: 8px;
+  }
+
+  /* one step dissolves into the next */
+  :global(#mw-quiz .q) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: opacity 0.18s ease;
+  }
+  :global(#mw-quiz .q.leaving) {
+    opacity: 0;
+  }
+  :global(#mw-quiz .q-title) {
+    margin: 0 0 2px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  /* single-pick options (life step) */
+  :global(#mw-quiz .opt) {
+    text-align: left;
+    padding: 13px 15px;
+    border-radius: var(--r-m);
+    border: 1px solid var(--hairline-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.35;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease;
+  }
+  :global(#mw-quiz .opt:hover) {
+    border-color: var(--ink);
+    background: var(--surface-2);
+  }
+
+  /* progress dots — one per survey step */
+  :global(#mw-quiz .q-dots) {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    margin: 18px 0 2px;
+  }
+  :global(#mw-quiz .q-dots i) {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--r-pill);
+    background: var(--hairline-strong);
+    transition: width 0.2s ease, background 0.2s ease;
+  }
+  :global(#mw-quiz .q-dots i.done) {
+    background: var(--accent);
+  }
+  :global(#mw-quiz .q-dots i.on) {
+    background: var(--accent);
+    width: 18px;
+  }
+
+  /* combined age + gender step */
+  :global(#mw-quiz .pick-group) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  :global(#mw-quiz .pick-group + .pick-group) {
+    margin-top: 14px;
+  }
+  :global(#mw-quiz .pick-label) {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  :global(#mw-quiz .pick-grid) {
+    display: grid;
+    gap: 8px;
+  }
+  :global(#mw-quiz .pick-grid.cols-3) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  :global(#mw-quiz .pick-grid.cols-2) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  :global(#mw-quiz .pick) {
+    padding: 12px 10px;
+    border-radius: var(--r-m);
+    text-align: center;
+    border: 1px solid var(--hairline-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+  }
+  :global(#mw-quiz .pick:hover) {
+    border-color: var(--ink);
+  }
+  :global(#mw-quiz .pick[aria-pressed='true']) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  /* "who inspires you" figure grid */
+  :global(#mw-quiz .fig-grid) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+  :global(#mw-quiz .fig-grid .fig:last-child:nth-child(odd)) {
+    grid-column: 1 / -1;
+  }
+  :global(#mw-quiz .fig) {
+    text-align: left;
+    padding: 12px 13px;
+    border-radius: 14px;
+    border: 1px solid var(--hairline-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+  }
+  :global(#mw-quiz .fig:hover) {
+    border-color: var(--ink);
+  }
+  :global(#mw-quiz .fig-name) {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.25;
+  }
+  :global(#mw-quiz .fig-tag) {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  :global(#mw-quiz .fig[aria-pressed='true']) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  :global(#mw-quiz .fig[aria-pressed='true'] .fig-tag) {
+    color: var(--accent-strong);
+  }
+
+  /* the "Continue" button on the multi-pick step */
+  :global(#mw-quiz .q-continue) {
+    height: 44px;
+    padding: 0 22px;
+    margin-top: 12px;
+    border-radius: var(--r-pill);
+    border: 1px solid transparent;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+  }
+  :global(#mw-quiz .q-continue:hover:not(:disabled)) {
+    background: var(--accent);
+    color: #fff;
+  }
+  :global(#mw-quiz .q-continue:disabled) {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #mw-quiz:not([hidden]) {
+      animation: pulse 0.2s ease-out;
+    }
+  }
+  @keyframes pulse {
+    from {
+      transform: scale(0.98);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+</style>
+
+<script>
+  import {
+    STEPS,
+    QUIZ_COPY,
+    routeProfile,
+    worldForProfile,
+    type SurveyAnswers,
+  } from '../data/quiz';
+  import { MW, emit, on } from '../scripts/events';
+
+  function init() {
+    const root = document.getElementById('mw-quiz');
+    const head = document.getElementById('mw-quiz-head');
+    const host = document.getElementById('mw-quiz-host');
+    const done = document.getElementById('mw-quiz-done');
+    if (!root || !head || !host || !done) return;
+
+    const prefersReduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    const answers: SurveyAnswers = {};
+
+    function goNext(i: number) {
+      if (i < STEPS.length - 1) renderStep(i + 1);
+      else finish();
+    }
+
+    /* fade the current step out, then run the next render */
+    function dissolve(then: () => void) {
+      const cur = host!.querySelector('.q');
+      if (cur && cur.classList.contains('leaving')) return; // already advancing
+      if (!cur || prefersReduced) {
+        then();
+        return;
+      }
+      cur.classList.add('leaving');
+      window.setTimeout(then, 190);
+    }
+
+    function renderStep(i: number) {
+      const data = STEPS[i];
+
+      const group = document.createElement('div');
+      group.className = 'q';
+      group.setAttribute('role', 'group');
+
+      if ('prompt' in data) {
+        const title = document.createElement('p');
+        title.className = 'q-title';
+        title.id = `mw-step-${data.id}`;
+        title.textContent = data.prompt;
+        group.setAttribute('aria-labelledby', title.id);
+        group.appendChild(title);
+      }
+      if ('helper' in data && data.helper) {
+        const hint = document.createElement('p');
+        hint.className = 'helper';
+        hint.textContent = data.helper;
+        group.appendChild(hint);
+      }
+
+      if (data.kind === 'demo') {
+        const picks: Record<string, string> = {};
+        for (const g of data.groups) {
+          const wrap = document.createElement('div');
+          wrap.className = 'pick-group';
+
+          const lab = document.createElement('p');
+          lab.className = 'pick-label';
+          lab.id = `mw-pick-${g.key}`;
+          lab.textContent = g.label;
+          wrap.appendChild(lab);
+
+          const grid = document.createElement('div');
+          grid.className = `pick-grid cols-${g.cols}`;
+          grid.setAttribute('role', 'group');
+          grid.setAttribute('aria-labelledby', lab.id);
+
+          for (const opt of g.options) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'pick';
+            b.setAttribute('aria-pressed', 'false');
+            b.textContent = opt;
+            b.addEventListener('click', () => {
+              for (const c of Array.from(grid.children)) {
+                c.setAttribute('aria-pressed', 'false');
+              }
+              b.setAttribute('aria-pressed', 'true');
+              picks[g.key] = opt;
+              if (Object.keys(picks).length === data.groups.length) {
+                for (const gg of data.groups) {
+                  answers[gg.key] = picks[gg.key];
+                }
+                dissolve(() => goNext(i));
+              }
+            });
+            grid.appendChild(b);
+          }
+          wrap.appendChild(grid);
+          group.appendChild(wrap);
+        }
+      } else if (data.kind === 'multi') {
+        const chosen: string[] = [];
+        const grid = document.createElement('div');
+        grid.className = 'fig-grid';
+
+        for (const opt of data.options) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'fig';
+          b.setAttribute('aria-pressed', 'false');
+
+          const nm = document.createElement('span');
+          nm.className = 'fig-name';
+          nm.textContent = opt.name;
+          const tg = document.createElement('span');
+          tg.className = 'fig-tag';
+          tg.textContent = opt.tag;
+          b.append(nm, tg);
+
+          b.addEventListener('click', () => {
+            const isOn = b.getAttribute('aria-pressed') === 'true';
+            if (isOn) {
+              b.setAttribute('aria-pressed', 'false');
+              chosen.splice(chosen.indexOf(opt.name), 1);
+            } else {
+              if (chosen.length >= data.pick) return; // cap at two
+              b.setAttribute('aria-pressed', 'true');
+              chosen.push(opt.name);
+            }
+            cont.disabled = chosen.length !== data.pick;
+          });
+          grid.appendChild(b);
+        }
+        group.appendChild(grid);
+
+        const cont = document.createElement('button');
+        cont.type = 'button';
+        cont.className = 'q-continue';
+        cont.textContent = 'Continue';
+        cont.disabled = true;
+        cont.addEventListener('click', () => {
+          answers.inspires = chosen.slice();
+          dissolve(() => goNext(i));
+        });
+        group.appendChild(cont);
+      } else {
+        for (const opt of data.options) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'opt';
+          b.textContent = opt.label;
+          b.addEventListener('click', () => {
+            answers.life = opt.label;
+            dissolve(() => goNext(i));
+          });
+          group.appendChild(b);
+        }
+      }
+
+      /* progress dots — lit for the current step and every step before it */
+      const dotRow = document.createElement('div');
+      dotRow.className = 'q-dots';
+      dotRow.setAttribute('aria-hidden', 'true');
+      for (let d = 0; d < STEPS.length; d++) {
+        const s = document.createElement('i');
+        if (d < i) s.className = 'done';
+        else if (d === i) s.className = 'on';
+        dotRow.appendChild(s);
+      }
+      group.appendChild(dotRow);
+
+      host!.innerHTML = '';
+      host!.appendChild(group);
+      group
+        .querySelector<HTMLElement>('.pick, .opt, .fig')
+        ?.focus();
+    }
+
+    function finish() {
+      host!.innerHTML = '';
+      head!.hidden = true;
+      done!.hidden = false;
+      done!.querySelector<HTMLElement>('h2')?.focus();
+
+      const profile = routeProfile(answers);
+      const world = worldForProfile(profile);
+
+      // Fire-and-forget: post the full payload once, at completion. The "Welcome
+      // to the community!" state above has already rendered — the UX never waits
+      // on this, and never surfaces a network error. `profile` is recomputed
+      // server-side; what we send here is advisory only. One silent retry.
+      const payload = JSON.stringify({
+        age: answers.age,
+        gender: answers.gender,
+        life: answers.life,
+        inspires: answers.inspires,
+        phone: answers.phone ?? '',
+        email: answers.email ?? '',
+        company: answers.company ?? '',
+      });
+      const post = () =>
+        fetch('/api/survey', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        });
+      post()
+        .then((r) => {
+          if (!r.ok) return post();
+        })
+        .catch(() => {
+          post().catch(() => {});
+        });
+
+      // TODO: redirect to /home once it exists.
+      emit(MW.quizComplete, { answers, profile, world });
+    }
+
+    on(MW.captureSubmit, (detail) => {
+      root!.hidden = false;
+      head!.hidden = false;
+      done!.hidden = true;
+      answers.phone = detail.phone || undefined;
+      answers.email = detail.email || undefined;
+      answers.company = detail.company || undefined;
+      const h2 = head!.querySelector('h2');
+      if (h2) {
+        h2.textContent =
+          detail.email || detail.phone
+            ? QUIZ_COPY.confirmHeading
+            : QUIZ_COPY.confirmHeadingNoContact;
+      }
+      renderStep(0);
+    });
+  }
+
+  init();
+</script>

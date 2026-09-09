@@ -1,0 +1,83 @@
+---
+/**
+ * /gallery — SKELETON. Browse the six worlds (brand bible Queue #2). Real
+ * wallpaper entries (images, per-item copy, export sizes) come later as a
+ * content collection; for now this lists the worlds from src/data/worlds.ts.
+ */
+import ChromeLayout from '../layouts/ChromeLayout.astro';
+import SkeletonNote from '../components/SkeletonNote.astro';
+import LockScreen from '../components/LockScreen.astro';
+import { WORLDS } from '../data/worlds';
+---
+
+<ChromeLayout
+  title="Gallery — browse by world — motivationalwallpaper.com"
+  description="Six aesthetic worlds. Find the one that feels like who you are becoming."
+  narrow={false}
+  noindex
+>
+  <SkeletonNote source="brand bible Queue #2" />
+
+  <h1>Browse by world</h1>
+  <p class="lead">One chrome, six worlds inside it. Pick the one that fits.</p>
+
+  <div class="grid">
+    {
+      WORLDS.map((w) => (
+        <article class="tile">
+          <div class="tile__art" style={`--art:${w.art};`}>
+            <LockScreen world={w} brandTag={false} />
+          </div>
+          <div class="tile__foot">
+            <span class="tile__name">{w.name}</span>
+            <span class="tile__persona">{w.persona}</span>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.4rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    margin: 0 0 2rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  .tile {
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .tile__art {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    background: var(--art);
+  }
+  .tile__foot {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .tile__name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+  .tile__persona {
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+  }
+</style>

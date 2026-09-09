@@ -1,0 +1,466 @@
+---
+/**
+ * Reel — the TikTok-style vertical snap-scroll of full-bleed lock screens
+ * (brand bible §07). Six panels, then a seamless loop.
+ *
+ * `.reel-frame` is a fixed viewport box; `.reel` scrolls inside it. The reel
+ * chrome (chevron, mono index, glass CTA, desktop scroll-dots, desktop
+ * cross-fade preview) is absolutely positioned in the frame so it never scrolls.
+ *
+ * Talks to the rest of Screen One only through CustomEvents (src/scripts/events):
+ *  - emits  mw:open-capture   (CTA click, or tapping the wallpaper)
+ *  - listens mw:world-hover / mw:world-hover-end / mw:world-select  (ThemeGrid)
+ */
+import { WORLDS } from '../data/worlds';
+import LockScreen from './LockScreen.astro';
+---
+
+<div class="reel-frame">
+  <div class="reel" id="reel" aria-label="Wallpaper reel">
+    {
+      WORLDS.map((w) => (
+        <article
+          class="panel"
+          data-world={w.key}
+          style={`--art:${w.art};--scrim:${w.scrim};--label-shadow:${w.labelShadow};`}
+        >
+          <div class="wall" />
+          <LockScreen world={w} />
+        </article>
+      ))
+    }
+  </div>
+
+  <div class="chevron" aria-hidden="true"></div>
+  <p class="reel-index" aria-hidden="true">01 / &#8734;</p>
+  <button class="cta" id="reel-cta" type="button">Join the community</button>
+  <div class="reel-dots" id="reel-dots" role="presentation"></div>
+  <div class="reel-preview" id="reel-preview" aria-hidden="true">
+    <div class="preview-wall"></div>
+    <p class="preview-line"></p>
+  </div>
+  <div class="bottom-scrim" aria-hidden="true"></div>
+</div>
+
+<style>
+  .reel-frame {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .reel {
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .reel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel {
+    position: relative;
+    height: 100dvh;
+    scroll-snap-align: start;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .wall {
+    position: absolute;
+    inset: 0;
+    background: var(--art);
+  }
+  /* 0–35% vertical scrim top AND bottom so the iOS overlay always reads (§09) */
+  .wall::before,
+  .wall::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 35%;
+    pointer-events: none;
+  }
+  .wall::before {
+    top: 0;
+    background: linear-gradient(180deg, var(--scrim), transparent);
+  }
+  .wall::after {
+    bottom: 0;
+    background: linear-gradient(0deg, var(--scrim), transparent);
+  }
+
+  /* the wallpaper line settles in as its panel lands (§09) — owned here so it
+     can key off `.panel.is-live` (added by the observer). */
+  .panel :global(.wp-line) {
+    opacity: 0;
+  }
+  :global(html.no-js) .panel :global(.wp-line) {
+    opacity: 1;
+  }
+  .panel.is-live :global(.wp-line) {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .panel.is-live :global(.wp-line) {
+      animation: settle 0.4s ease-out both;
+    }
+  }
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: scale(1.02);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* ---- reel chrome ---- */
+  .cta {
+    position: absolute;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 40;
+    height: 44px;
+    padding: 0 24px;
+    border-radius: var(--r-pill);
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .cta:focus-visible {
+    outline-color: #fff;
+  }
+
+  .bottom-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 120px;
+    z-index: 35;
+    pointer-events: none;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.42), transparent);
+  }
+
+  .reel-index {
+    position: absolute;
+    right: 16px;
+    bottom: 27px;
+    z-index: 40;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: #fff;
+    opacity: 0.72;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+
+  .chevron {
+    position: absolute;
+    left: 50%;
+    bottom: 92px;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+  .chevron::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-right: 1.7px solid #fff;
+    border-bottom: 1.7px solid #fff;
+    transform: rotate(45deg);
+    opacity: 0.8;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .chevron {
+      animation: bob 2s ease-in-out infinite;
+    }
+  }
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translate(-50%, 0);
+    }
+    50% {
+      transform: translate(-50%, 6px);
+    }
+  }
+
+  /* ---- desktop-only reel chrome ---- */
+  .reel-dots {
+    display: none;
+  }
+  .reel-preview {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    /* CTA stays horizontally centred on the phone (base rule: left:50% + translateX) */
+    .chevron,
+    .bottom-scrim,
+    .reel-index {
+      display: none;
+    }
+
+    .reel-dots {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .reel-preview {
+      display: block;
+      position: absolute;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 260ms ease;
+    }
+    .reel-preview.is-shown {
+      opacity: 1;
+    }
+    .preview-wall {
+      position: absolute;
+      inset: 0;
+      background: var(--art);
+    }
+    .preview-wall::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        var(--scrim),
+        transparent 35%,
+        transparent 65%,
+        var(--scrim)
+      );
+    }
+    .preview-line {
+      position: absolute;
+      top: 58%;
+      left: 0;
+      right: 0;
+      margin: 0;
+      padding: 0 12%;
+      text-align: center;
+      font-family: var(--face);
+      color: var(--line, var(--fg));
+      font-size: clamp(1.5rem, 3.4vw, 2.3rem);
+      line-height: 1.2;
+      font-weight: 500;
+      text-wrap: balance;
+    }
+    .reel-preview[data-world="stoic"] .preview-line {
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .reel-preview[data-world="rebuild"] .preview-line {
+      font-style: italic;
+    }
+    .reel-preview[data-world="scripture"] .preview-line,
+    .reel-preview[data-world="builder"] .preview-line {
+      font-weight: 700;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reel-preview {
+      transition: opacity 120ms ease;
+    }
+  }
+
+  /* dots live behind the desktop media query for visibility, but style the
+     shared bits here so they apply once shown. */
+  .dot {
+    width: 5px;
+    height: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.42);
+    cursor: pointer;
+    transition: height 0.2s ease, background 0.2s ease;
+  }
+  .dot.is-active {
+    background: var(--accent);
+    height: 16px;
+  }
+  .dot:focus-visible {
+    outline-color: #fff;
+  }
+</style>
+
+<script>
+  import { WORLDS, REEL_ORDER } from '../data/worlds';
+  import type { WorldKey } from '../data/worlds';
+  import { MW, emit, on } from '../scripts/events';
+
+  function init() {
+    const reel = document.getElementById('reel');
+    if (!reel) return;
+    const frame = reel.closest('.reel-frame') as HTMLElement;
+    const dotsWrap = document.getElementById('reel-dots') as HTMLElement;
+    const reelIndex = frame.querySelector('.reel-index') as HTMLElement | null;
+    const preview = document.getElementById('reel-preview') as HTMLElement;
+    const previewLine = preview.querySelector('.preview-line') as HTMLElement;
+    const cta = document.getElementById('reel-cta') as HTMLElement;
+    const prefersReduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    // real panels, captured before the loop clones are inserted
+    const realPanels = Array.from(reel.querySelectorAll<HTMLElement>('.panel'));
+    const firstReal = realPanels[0];
+    const lastReal = realPanels[realPanels.length - 1];
+
+    // seamless loop: head clone of the last panel, tail clone of the first.
+    // When the scroll settles on a clone we jump one loop — identical pixels.
+    const leadingClone = lastReal.cloneNode(true) as HTMLElement;
+    const trailingClone = firstReal.cloneNode(true) as HTMLElement;
+    leadingClone.classList.add('clone');
+    trailingClone.classList.add('clone');
+    leadingClone.removeAttribute('id');
+    trailingClone.removeAttribute('id');
+    reel.insertBefore(leadingClone, firstReal);
+    reel.appendChild(trailingClone);
+    reel.scrollTop = firstReal.offsetTop;
+
+    const loopDistance = () => trailingClone.offsetTop - firstReal.offsetTop;
+    function onSettle() {
+      const st = reel!.scrollTop;
+      const loop = loopDistance();
+      if (st < firstReal.offsetTop - 4) reel!.scrollTop = st + loop;
+      else if (st > trailingClone.offsetTop - 4) reel!.scrollTop = st - loop;
+    }
+
+    let chevronKilled = false;
+    function killChevron() {
+      if (chevronKilled) return;
+      chevronKilled = true;
+      frame.querySelector('.chevron')?.remove();
+    }
+
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+    reel.addEventListener(
+      'scroll',
+      () => {
+        killChevron();
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(onSettle, 140);
+      },
+      { passive: true },
+    );
+    if ('onscrollend' in window) reel.addEventListener('scrollend', onSettle);
+
+    const dots = REEL_ORDER.map((key, i) => {
+      const w = WORLDS[i];
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dot';
+      b.setAttribute('aria-label', `Go to ${w.name}`);
+      b.addEventListener('click', () => scrollToWorld(key));
+      dotsWrap.appendChild(b);
+      return b;
+    });
+
+    function setActive(key: WorldKey) {
+      const idx = REEL_ORDER.indexOf(key);
+      if (idx < 0) return;
+      const n = String(idx + 1).padStart(2, '0');
+      if (reelIndex) reelIndex.textContent = `${n} / ∞`;
+      dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
+    }
+
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+              e.target.classList.add('is-live');
+              const key = (e.target as HTMLElement).dataset.world as
+                | WorldKey
+                | undefined;
+              if (key) setActive(key);
+            }
+          }
+        },
+        { root: reel, threshold: [0, 0.55, 0.9] },
+      );
+      reel.querySelectorAll('.panel').forEach((p) => io.observe(p));
+    } else {
+      reel.querySelectorAll('.panel').forEach((p) => p.classList.add('is-live'));
+      setActive('stoic');
+    }
+
+    function scrollToWorld(key: WorldKey) {
+      const target = realPanels.find((p) => p.dataset.world === key);
+      if (!target) return;
+      reel!.scrollTo({
+        top: target.offsetTop,
+        behavior: prefersReduced ? 'auto' : 'smooth',
+      });
+    }
+
+    let rz: ReturnType<typeof setTimeout> | undefined;
+    window.addEventListener('resize', () => {
+      clearTimeout(rz);
+      rz = setTimeout(() => {
+        const activeIdx = dots.findIndex((d) => d.classList.contains('is-active'));
+        if (activeIdx < 0) return;
+        const target = realPanels.find(
+          (p) => p.dataset.world === REEL_ORDER[activeIdx],
+        );
+        if (target) reel!.scrollTop = target.offsetTop;
+      }, 180);
+    });
+
+    // desktop cross-fade preview, driven by ThemeGrid
+    on(MW.worldHover, (detail) => {
+      const w = WORLDS.find((x) => x.key === detail.world);
+      if (!w) return;
+      preview.dataset.world = w.key;
+      preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};--fg:${w.overlay};--line:${w.lineColor};--face:var(--face-${w.key});`;
+      previewLine.textContent = w.line;
+      preview.classList.add('is-shown');
+    });
+    on(MW.worldHoverEnd, () => preview.classList.remove('is-shown'));
+    on(MW.worldSelect, (detail) => {
+      preview.classList.remove('is-shown');
+      scrollToWorld(detail.world);
+    });
+
+    // open the capture sheet
+    cta.addEventListener('click', () => emit(MW.openCapture));
+    reel.addEventListener('click', () => emit(MW.openCapture));
+  }
+
+  init();
+</script>

@@ -1,0 +1,217 @@
+---
+/**
+ * LockScreen — the iOS lock-screen overlay recreated in CSS (brand bible §07).
+ * Presentational only. Sits on top of a full-bleed wallpaper.
+ *
+ * The clock reads 9:41 by convention (Apple's product-shot time). The date is
+ * fixed to "Monday, September 8" to match the design mockups.
+ *
+ * Sets --fg / --line / --face from the world so it is self-contained and can be
+ * reused (theme cards, gallery previews). The wall art + scrims are the parent's
+ * job (see Reel.astro).
+ */
+import type { World } from '../data/worlds';
+
+export interface Props {
+  world: World;
+  /** override the wallpaper line (defaults to world.line). */
+  line?: string;
+  /** show the top-left brand wordmark tag (default true). */
+  brandTag?: boolean;
+}
+const { world, line = world.line, brandTag = true } = Astro.props;
+const faceVar = `var(--face-${world.key})`;
+---
+
+<div
+  class="lock"
+  data-world={world.key}
+  style={`--fg:${world.overlay};--line:${world.lineColor};--face:${faceVar};`}
+>
+  <span class="island" aria-hidden="true"></span>
+  {brandTag && <span class="brandtag" aria-hidden="true">motivationalwallpaper</span>}
+  <span class="glyph" aria-hidden="true"></span>
+  <span class="date">Monday, September 8</span>
+  <span class="time">9:41</span>
+  <p class="wp-line">{line}</p>
+  <span class="actions" aria-hidden="true">
+    <span class="act">
+      <svg class="act__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M7 3h10l-1.8 4.3H8.8L7 3Z" />
+        <rect x="9.6" y="8.3" width="4.8" height="11.4" rx="1.4" />
+      </svg>
+    </span>
+    <span class="act">
+      <svg class="act__icon" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" aria-hidden="true">
+        <path d="M8.6 4 7.5 5.9H4.5A2.5 2.5 0 0 0 2 8.4v9.1A2.5 2.5 0 0 0 4.5 20h15a2.5 2.5 0 0 0 2.5-2.5V8.4a2.5 2.5 0 0 0-2.5-2.5h-3L15.4 4H8.6Zm3.4 4.6a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" />
+      </svg>
+    </span>
+  </span>
+  <span class="home" aria-hidden="true"></span>
+</div>
+
+<style>
+  .lock {
+    position: absolute;
+    inset: 0;
+    color: var(--fg);
+    z-index: 3;
+  }
+
+  .island {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 124px;
+    height: 35px;
+    background: #000;
+    border-radius: 20px;
+  }
+
+  .brandtag {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-size: 13px;
+    opacity: 0.62;
+    color: var(--fg);
+  }
+
+  /* closed padlock */
+  .glyph {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 15px;
+    height: 12px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    opacity: 0.92;
+  }
+  .glyph::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -7px;
+    transform: translateX(-50%);
+    width: 9px;
+    height: 8px;
+    border: 1.5px solid currentColor;
+    border-bottom: 0;
+    border-radius: 5px 5px 0 0;
+  }
+
+  .date {
+    position: absolute;
+    top: 86px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-system);
+    font-size: 13px;
+    opacity: 0.92;
+    letter-spacing: 0.01em;
+  }
+  .time {
+    position: absolute;
+    top: 104px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-system);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-size: clamp(66px, 19vw, 84px);
+  }
+
+  .wp-line {
+    position: absolute;
+    top: 60%;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0 12%;
+    text-align: center;
+    font-family: var(--face);
+    color: var(--line, var(--fg));
+    font-size: clamp(1.55rem, 7vw, 2.35rem);
+    line-height: 1.2;
+    font-weight: 500;
+    text-wrap: balance;
+    /* opacity + settle animation are owned by Reel (.panel.is-live) */
+  }
+
+  /* world display-face inflections (§08) */
+  [data-world="stoic"] .wp-line {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  [data-world="soft"] .wp-line {
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+  [data-world="scripture"] .wp-line {
+    font-weight: 600;
+    font-size: clamp(1.95rem, 8.5vw, 2.9rem);
+  }
+  [data-world="builder"] .wp-line {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  [data-world="aesthetic"] .wp-line {
+    font-weight: 600;
+  }
+  [data-world="rebuild"] .wp-line {
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.85rem, 8vw, 2.7rem);
+  }
+
+  .actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 118px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 42px;
+  }
+  .act {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 15%, transparent);
+    display: grid;
+    place-items: center;
+  }
+  .act__icon {
+    width: 19px;
+    height: 19px;
+    opacity: 0.95;
+  }
+
+  .home {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    width: 132px;
+    height: 5px;
+    border-radius: var(--r-pill);
+    background: currentColor;
+    opacity: 0.7;
+  }
+
+  @media (min-width: 900px) {
+    .time {
+      font-size: clamp(58px, 10vw, 80px);
+    }
+  }
+</style>

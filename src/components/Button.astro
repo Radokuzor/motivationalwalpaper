@@ -1,0 +1,91 @@
+---
+/**
+ * Button — brand bible §06. 44px tall, fully rounded (999px).
+ *  - primary: rests on --ink / --paper text; fills brass on hover. One per view.
+ *  - ghost:   transparent, 1px --hairline-strong border, --ink text.
+ *  - glass:   for dark imagery — translucent, blurred, white text.
+ * Renders <a> when `href` is set, otherwise <button>.
+ */
+export interface Props {
+  variant?: 'primary' | 'ghost' | 'glass';
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  full?: boolean;
+  class?: string;
+  id?: string;
+}
+const {
+  variant = 'primary',
+  href,
+  type = 'button',
+  full = false,
+  class: klass,
+  id,
+} = Astro.props;
+const cls = ['btn', `btn--${variant}`, full && 'btn--full', klass];
+---
+
+{
+  href ? (
+    <a class:list={cls} id={id} href={href}>
+      <slot />
+    </a>
+  ) : (
+    <button class:list={cls} id={id} type={type}>
+      <slot />
+    </button>
+  )
+}
+
+<style>
+  .btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 22px;
+    border-radius: var(--r-pill);
+    border: 1px solid transparent;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: -0.005em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  }
+  .btn--full {
+    width: 100%;
+  }
+
+  .btn--primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn--primary:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn--ghost {
+    background: transparent;
+    border-color: var(--hairline-strong);
+    color: var(--ink);
+  }
+  .btn--ghost:hover {
+    border-color: var(--ink);
+  }
+
+  .btn--glass {
+    background: rgba(0, 0, 0, 0.28);
+    border-color: rgba(255, 255, 255, 0.34);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: #fff;
+  }
+  .btn--glass:focus-visible {
+    outline-color: #fff;
+  }
+</style>

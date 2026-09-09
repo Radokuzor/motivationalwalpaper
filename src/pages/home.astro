@@ -1,0 +1,63 @@
+---
+/**
+ * /home — SKELETON. Profile home (brand bible Queue #3): streak, today's
+ * micro-action, favourites. No auth / persistence yet — static placeholder.
+ * This is where Screen One's quiz will eventually redirect.
+ */
+import ChromeLayout from '../layouts/ChromeLayout.astro';
+import SkeletonNote from '../components/SkeletonNote.astro';
+---
+
+<ChromeLayout
+  title="Your home — motivationalwallpaper.com"
+  description="Your streak, today's one small action, and the lines that hit."
+  noindex
+>
+  <SkeletonNote source="brand bible Queue #3, 03_feature_list.md “Morning — the anchor”" />
+
+  <h1>Good morning.</h1>
+
+  <section class="card">
+    <p class="k">Streak</p>
+    <p class="v">— days</p>
+  </section>
+
+  <section class="card">
+    <p class="k">Today's one thing</p>
+    <p class="v">One profile-matched micro-action. Takes 60 seconds. Proves you already are.</p>
+  </section>
+
+  <section class="card">
+    <p class="k">Saved</p>
+    <p class="v">The lines you hearted will collect here.</p>
+  </section>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-display-size);
+    font-weight: var(--t-display-weight);
+    letter-spacing: var(--t-display-track);
+    line-height: var(--t-display-leading);
+    margin: 0 0 1.5rem;
+  }
+  .card {
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--surface);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .k {
+    margin: 0 0 0.35rem;
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-track);
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .v {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+</style>
