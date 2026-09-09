@@ -250,16 +250,21 @@ img{max-width:100%}
   text-shadow:0 1px 4px rgba(0,0,0,.45);
 }
 
-/* scroll-hint chevron — 6px bob, removed for good after the first scroll */
+/* swipe-down hint — label + cascading down-chevrons, removed for good after the first scroll */
 .chevron{
-  position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:40;
-  width:16px;height:16px;pointer-events:none;
+  position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:40;
+  display:flex;flex-direction:column;align-items:center;pointer-events:none;
 }
-.chevron::before{
-  content:"";position:absolute;inset:0;
-  border-right:1.7px solid #fff;border-bottom:1.7px solid #fff;transform:rotate(45deg);
-  opacity:.8;
+.chevron b{
+  margin-bottom:10px;font-weight:600;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:#fff;opacity:.7;text-shadow:0 1px 4px rgba(0,0,0,.45);
 }
+.chevron i{
+  width:13px;height:13px;margin-top:-6px;
+  border-right:1.7px solid #fff;border-bottom:1.7px solid #fff;
+  transform:rotate(45deg);opacity:.85;
+}
+.chevron i:first-of-type{margin-top:0}
 
 /* =============================== desktop-only chrome ==================== */
 .reel-dots{display:none}
@@ -509,11 +514,17 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 /* ================================ motion (§09) ========================= */
 @media (prefers-reduced-motion: no-preference){
   .panel.is-live .wp-line{animation:settle .4s ease-out both}
-  .chevron{animation:bob 2s ease-in-out infinite}
+  .chevron i{animation:swipe 1.8s ease-in-out infinite}
+  .chevron i:nth-of-type(2){animation-delay:.18s}
+  .chevron i:nth-of-type(3){animation-delay:.36s}
   .view-quiz:not([hidden]){animation:pulse .2s ease-out}
 }
 @keyframes settle{from{opacity:0;transform:scale(1.02)}to{opacity:1;transform:scale(1)}}
-@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
+@keyframes swipe{
+  0%,100%{opacity:0;transform:rotate(45deg) translate(-3px,-3px)}
+  30%{opacity:.9}
+  65%{opacity:.9;transform:rotate(45deg) translate(3px,3px)}
+}
 @keyframes pulse{from{transform:scale(.98)}to{transform:scale(1)}}
 
 @media (prefers-reduced-motion: reduce){
@@ -637,7 +648,7 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 
   <!-- persistent chrome -->
   <div class="bottom-scrim" aria-hidden="true"></div>
-  <div class="chevron" aria-hidden="true"></div>
+  <div class="chevron" aria-hidden="true"><b>Swipe down</b><i></i><i></i><i></i></div>
   <p class="reel-index" aria-hidden="true">01 / &#8734;</p>
   <button class="cta" type="button" id="cta">Join the community</button>
 

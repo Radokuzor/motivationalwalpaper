@@ -31,7 +31,7 @@ import LockScreen from './LockScreen.astro';
     }
   </div>
 
-  <div class="chevron" aria-hidden="true"></div>
+  <div class="chevron" aria-hidden="true"><b>Swipe down</b><i></i><i></i><i></i></div>
   <p class="reel-index" aria-hidden="true">01 / &#8734;</p>
   <button class="cta" id="reel-cta" type="button">Download</button>
   <div class="reel-dots" id="reel-dots" role="presentation"></div>
@@ -176,34 +176,59 @@ import LockScreen from './LockScreen.astro';
   .chevron {
     position: absolute;
     left: 50%;
-    bottom: 92px;
+    bottom: 84px;
     transform: translateX(-50%);
     z-index: 40;
-    width: 16px;
-    height: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     pointer-events: none;
   }
-  .chevron::before {
-    content: "";
-    position: absolute;
-    inset: 0;
+  .chevron b {
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0.7;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+  .chevron i {
+    width: 13px;
+    height: 13px;
+    margin-top: -6px;
     border-right: 1.7px solid #fff;
     border-bottom: 1.7px solid #fff;
     transform: rotate(45deg);
-    opacity: 0.8;
+    opacity: 0.85;
+  }
+  .chevron i:first-of-type {
+    margin-top: 0;
   }
   @media (prefers-reduced-motion: no-preference) {
-    .chevron {
-      animation: bob 2s ease-in-out infinite;
+    .chevron i {
+      animation: swipe 1.8s ease-in-out infinite;
+    }
+    .chevron i:nth-of-type(2) {
+      animation-delay: 0.18s;
+    }
+    .chevron i:nth-of-type(3) {
+      animation-delay: 0.36s;
     }
   }
-  @keyframes bob {
+  @keyframes swipe {
     0%,
     100% {
-      transform: translate(-50%, 0);
+      opacity: 0;
+      transform: rotate(45deg) translate(-3px, -3px);
     }
-    50% {
-      transform: translate(-50%, 6px);
+    30% {
+      opacity: 0.9;
+    }
+    65% {
+      opacity: 0.9;
+      transform: rotate(45deg) translate(3px, 3px);
     }
   }
 
