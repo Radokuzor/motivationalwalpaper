@@ -6,6 +6,7 @@
  * Renders nothing chrome-visible itself: lock-screen pages (index) use this
  * directly; content pages wrap it in ChromeLayout for the header/footer shell.
  */
+import Analytics from '@vercel/analytics/astro';
 import '../styles/tokens.css';
 import '../styles/base.css';
 
@@ -68,5 +69,6 @@ const FONTS_HREF =
   </head>
   <body class={bodyClass}>
     <slot />
+    <Analytics />
   </body>
 </html>

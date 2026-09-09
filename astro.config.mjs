@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-import vercel from '@astrojs/vercel/serverless';
+import vercel from '@astrojs/vercel';
 
 // The production origin. Used for canonical URLs, sitemap, and robots.txt.
 // Change this if the site ships on a different domain.
@@ -10,10 +10,11 @@ const SITE = 'https://motivationalwallpaper.com';
 // https://astro.build/config
 export default defineConfig({
   site: SITE,
-  // `hybrid`: every page is prerendered to static HTML by default; only routes
-  // that opt out (`export const prerender = false` — currently just
-  // `src/pages/api/survey.ts`) run as Vercel serverless functions.
-  output: 'hybrid',
+  // Astro 5 dropped `hybrid`: `output: 'static'` (the default) prerenders every
+  // page, and a route opts into on-demand rendering with `export const
+  // prerender = false` — currently just `src/pages/api/survey.ts`, which runs as
+  // a Vercel serverless function.
+  output: 'static',
   adapter: vercel(),
   trailingSlash: 'never',
   integrations: [

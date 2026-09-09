@@ -4,12 +4,12 @@ A daily identity anchor on your lock screen. The wallpaper is the door: Screen O
 opens *as* an iOS lock screen, captures a way to reach you, and routes you into
 the engagement system.
 
-Built with **[Astro](https://astro.build)** on the **Vercel** adapter
-(`output: 'hybrid'` — every page prerenders to static HTML; only `POST
-/api/survey` runs as a serverless function), interactive parts as client-side
-islands, **vanilla CSS + design tokens** (no Tailwind). Survey responses are
-written to **Firebase Firestore** server-side via the Admin SDK. Design system is
-brand bible §04–§09.
+Built with **[Astro](https://astro.build) 5** on the **Vercel** adapter
+(`output: 'static'` — every page prerenders to static HTML; only `POST
+/api/survey` opts out with `prerender = false` and runs as a serverless
+function), interactive parts as client-side islands, **vanilla CSS + design
+tokens** (no Tailwind). Survey responses are written to **Firebase Firestore**
+server-side via the Admin SDK. Design system is brand bible §04–§09.
 
 ## Run it
 
@@ -21,12 +21,9 @@ npm run preview   # serve the build locally
 npm run check     # astro check — type-check .astro + <script> islands
 ```
 
-> **Node 20+** (see `.nvmrc`). `astro dev` / `astro build` also run on Node 18,
-> but `astro check`'s toolchain needs 20. This machine's system Node is 18.19.1;
-> a local Node 20 is installed at `~/.local/node-v20/` — prefix commands with
-> `PATH="$HOME/.local/node-v20/bin:$PATH"` (or `nvm use`).
->
-> `@astrojs/sitemap` is pinned to `3.2.1` — newer 3.7.x breaks with Astro 4.
+> **Node 20.3+ or 22+** (Astro 5's supported range; see `.nvmrc` and
+> `engines.node`). Vercel builds and runs the function on **Node 22** — set
+> Project Settings → Node.js Version to 22.x to match.
 
 ## Layout
 
@@ -107,7 +104,7 @@ state renders regardless of the network.
 6. returns `{ ok:true, profile, world }`.
 
 **Env vars** (`.env` locally — gitignored, see `.env.example`; Vercel → Project
-Settings → Environment Variables, all environments; Vercel Node version 20.x):
+Settings → Environment Variables, all environments; Vercel Node.js Version 22.x):
 
 ```
 FIREBASE_PROJECT_ID=...
@@ -116,8 +113,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY----
 ```
 
 Firestore rules **deny all client access** (`firestore.rules` — apply in the
-Firebase console); every write goes through the Admin SDK. Run/build on Node 20:
-`PATH="$HOME/.local/node-v20/bin:$PATH" npm run dev`.
+Firebase console); every write goes through the Admin SDK.
 
 ```bash
 curl -X POST http://localhost:4321/api/survey -H 'content-type: application/json' -d '{
