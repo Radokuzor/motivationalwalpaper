@@ -250,7 +250,7 @@ img{max-width:100%}
   text-shadow:0 1px 4px rgba(0,0,0,.45);
 }
 
-/* swipe-down hint — label + cascading down-chevrons, removed for good after the first scroll */
+/* swipe-down hint — label + cascading down-chevrons; persistent on mobile and desktop */
 .chevron{
   position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:40;
   display:flex;flex-direction:column;align-items:center;pointer-events:none;
@@ -426,7 +426,9 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 
   /* left-panel chrome */
   .cta{position:absolute;left:24px;right:auto;bottom:24px;transform:none}
-  .bottom-scrim,.reel-index,.chevron{display:none}
+  .bottom-scrim,.reel-index{display:none}
+  /* swipe hint stays, re-centred over the left reel half */
+  .chevron{left:25%;bottom:34px}
 
   .reel-dots{
     position:absolute;left:calc(50% - 26px);top:50%;transform:translateY(-50%);
@@ -785,18 +787,9 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
     }
   }
 
-  /* ------------------------------------------------ scroll-hint chevron */
-  var chevronKilled = false;
-  function killChevron(){
-    if (chevronKilled) return;
-    chevronKilled = true;
-    var c = document.querySelector('.chevron');
-    if (c && c.parentNode) c.parentNode.removeChild(c);
-  }
-
+  /* ------------------------------------------------ reel settle */
   var settleTimer;
   reel.addEventListener('scroll', function(){
-    killChevron();
     clearTimeout(settleTimer);
     settleTimer = setTimeout(onSettle, 140);
   }, { passive:true });

@@ -242,7 +242,8 @@ import LockScreen from './LockScreen.astro';
 
   @media (min-width: 900px) {
     /* CTA stays horizontally centred on the phone (base rule: left:50% + translateX) */
-    .chevron,
+    /* .chevron stays visible on desktop too — it sits centred in the left reel half
+       (position:absolute in .reel-frame, which is 50% wide here) */
     .bottom-scrim,
     .reel-index {
       display: none;
@@ -386,18 +387,10 @@ import LockScreen from './LockScreen.astro';
       else if (st > trailingClone.offsetTop - 4) reel!.scrollTop = st - loop;
     }
 
-    let chevronKilled = false;
-    function killChevron() {
-      if (chevronKilled) return;
-      chevronKilled = true;
-      frame.querySelector('.chevron')?.remove();
-    }
-
     let settleTimer: ReturnType<typeof setTimeout> | undefined;
     reel.addEventListener(
       'scroll',
       () => {
-        killChevron();
         clearTimeout(settleTimer);
         settleTimer = setTimeout(onSettle, 140);
       },
