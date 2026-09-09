@@ -85,23 +85,32 @@ ThemeGrid ──mw:world-hover / -end / -select──▶  Reel   (desktop cross-
 
 ## Backend
 
-Screen One posts the completed survey **once**, from `Quiz.astro` `finish()`,
-fire-and-forget (`keepalive`, one silent retry) — the "Welcome to the community!"
-state renders regardless of the network.
+Screen One saves the survey **progressively** — `Quiz.astro` fires a
+fire-and-forget `POST /api/survey` at contact capture, after each quiz step, and
+at completion, all carrying one client-generated `responseId`. Abandoned flows
+still leave a `status: 'partial'` row. The "Welcome to the community!" state
+renders regardless of the network. The capture-sheet submit ("Download") also
+renders the on-screen wallpaper to a PNG and downloads it (`src/scripts/wallpaper.ts`).
 
 `POST /api/survey` (`src/pages/api/survey.ts`, `prerender = false`):
 
 1. parses JSON (`400` on bad JSON);
 2. honeypot — a truthy `company` field returns `200 {ok:true}` and writes nothing;
-3. validates `age` / `gender` / `life` / `inspires` against the sets derived from
-   `STEPS`, plus optional `email` (regex) / `phone` (7–15 digits) — `400` on any
-   miss;
-4. recomputes `profile` with `routeProfile()` (**any client-sent `profile` is
-   ignored**) and `world` with `worldForProfile()`;
-5. writes one row to Firestore `survey_responses` via the Admin SDK — contact
-   stored as `null` when absent; `emailStatus` / `smsStatus` stamped `'pending'`
-   when present (Beehiiv / SMS are deferred); `createdAt` is a server timestamp;
-6. returns `{ ok:true, profile, world }`.
+3. validates the fields present against the sets derived from `STEPS` — a
+   `status: 'complete'` call must have them all, a `partial` call need not — plus
+   optional `email` (regex) / `phone` (7–15 digits); `400` on any invalid value;
+4. recomputes `profile` with `routeProfile()` once routable (**any client-sent
+   `profile` is ignored**) and `world` with `worldForProfile()`;
+5. **upserts** one Firestore `survey_responses` doc per `responseId` via the Admin
+   SDK — contact `null` when absent; `emailStatus` / `smsStatus` stamped
+   `'pending'` when present (Beehiiv / SMS deferred); `createdAt` on first write,
+   `updatedAt` every write, `completedAt` on completion;
+6. returns `{ ok:true, profile, world }` (`profile`/`world` may be `null` on a
+   partial).
+
+Full status, the `survey_responses` shape, and what's left to wire live in
+[`BUILD_LOG.md`](BUILD_LOG.md). Task briefs: [`backend-build-brief.md`](backend-build-brief.md)
+(built), [`admin-build-brief.md`](admin-build-brief.md) (not built).
 
 **Env vars** (`.env` locally — gitignored, see `.env.example`; Vercel → Project
 Settings → Environment Variables, all environments; Vercel Node.js Version 22.x):

@@ -1,0 +1,93 @@
+[
+  {
+    "figure": "David Goggins",
+    "quotes": [
+      { "text": "Don't stop when you're tired. Stop when you're done.", "attribution": "David Goggins" },
+      { "text": "The most important conversations you'll ever have are the ones you have with yourself.", "attribution": "David Goggins" }
+    ]
+  },
+  {
+    "figure": "Marcus Aurelius",
+    "quotes": [
+      { "text": "You have power over your mind — not outside events. Realize this, and you will find strength.", "attribution": "Marcus Aurelius" },
+      { "text": "The impediment to action advances action. What stands in the way becomes the way.", "attribution": "Marcus Aurelius" }
+    ]
+  },
+  {
+    "figure": "Steve Jobs",
+    "quotes": [
+      { "text": "Your time is limited, so don't waste it living someone else's life.", "attribution": "Steve Jobs" },
+      { "text": "Stay hungry. Stay foolish.", "attribution": "Steve Jobs" }
+    ]
+  },
+  {
+    "figure": "Alex Hormozi",
+    "quotes": [
+      { "text": "The longer you're willing to delay gratification, the more successful you become.", "attribution": "Alex Hormozi" },
+      { "text": "You are only one skill away from a completely different life.", "attribution": "Alex Hormozi" }
+    ]
+  },
+  {
+    "figure": "Taylor Swift",
+    "quotes": [
+      { "text": "If you're lucky enough to be different, never change.", "attribution": "Taylor Swift" },
+      { "text": "You are the only one who gets to decide what you will be remembered for.", "attribution": "Taylor Swift" }
+    ]
+  },
+  {
+    "figure": "Alex Cooper",
+    "quotes": [
+      { "text": "I'd rather bet on myself and lose than never bet on myself at all.", "attribution": "Alex Cooper" },
+      { "text": "The second you stop apologizing for who you are, everything changes.", "attribution": "Alex Cooper" }
+    ]
+  },
+  {
+    "figure": "Beyoncé",
+    "quotes": [
+      { "text": "Power is not given to you. You have to take it.", "attribution": "Beyoncé" },
+      { "text": "If everything was perfect, you would never learn and you would never grow.", "attribution": "Beyoncé" }
+    ]
+  },
+  {
+    "figure": "Zendaya",
+    "quotes": [
+      { "text": "Anything is possible if you have the right people there to support you.", "attribution": "Zendaya" },
+      { "text": "Just because it takes you longer doesn't mean you failed.", "attribution": "Zendaya" }
+    ]
+  },
+  {
+    "figure": "Oprah Winfrey",
+    "quotes": [
+      { "text": "Turn your wounds into wisdom.", "attribution": "Oprah Winfrey" },
+      { "text": "The biggest adventure you can take is to live the life of your dreams.", "attribution": "Oprah Winfrey" }
+    ]
+  },
+  {
+    "figure": "Mel Robbins",
+    "quotes": [
+      { "text": "You are one decision away from a completely different life.", "attribution": "Mel Robbins" },
+      { "text": "If you have an impulse to act on a goal, move within five seconds — or your brain will stop you.", "attribution": "Mel Robbins" }
+    ]
+  },
+  {
+    "figure": "Jesus",
+    "quotes": [
+      { "text": "Ask, and it will be given to you; seek, and you will find.", "attribution": "Jesus (Matthew 7:7)" },
+      { "text": "With God all things are possible.", "attribution": "Jesus (Matthew 19:26)" }
+    ]
+  },
+  {
+    "figure": "My pastor",
+    "quotes": [
+      { "text": "God didn't bring you this far to leave you.", "attribution": "Your pastor" },
+      { "text": "The waiting season is not wasted — it's the preparation.", "attribution": "Your pastor" }
+    ]
+  },
+  {
+    "figure": "My dad",
+    "quotes": [
+      { "text": "Hard work beats talent when talent doesn't work hard.", "attribution": "Your dad" },
+      { "text": "Do it right the first time so you don't have to do it twice.", "attribution": "Your dad" }
+    ]
+  }
+]

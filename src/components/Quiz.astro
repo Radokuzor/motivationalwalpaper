@@ -25,6 +25,10 @@ import { QUIZ_COPY } from '../data/quiz';
   <div id="mw-quiz-done" hidden>
     <h2 tabindex="-1">{QUIZ_COPY.doneHeading}</h2>
     <p class="helper">{QUIZ_COPY.doneSub}</p>
+    <figure id="mw-quiz-quote" hidden>
+      <blockquote></blockquote>
+      <figcaption></figcaption>
+    </figure>
   </div>
 </section>
 
@@ -54,6 +58,41 @@ import { QUIZ_COPY } from '../data/quiz';
 
   #mw-quiz-host {
     margin-top: 8px;
+  }
+
+  /* the motivational quote under the welcome banner (a taste of the delivery) */
+  #mw-quiz-quote {
+    margin: 18px 0 0;
+    padding: 14px 16px;
+    border-left: 2px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 var(--r-m) var(--r-m) 0;
+    transition: opacity 0.18s ease;
+  }
+  #mw-quiz-quote.swapping {
+    opacity: 0;
+  }
+  #mw-quiz-quote blockquote {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.45;
+    letter-spacing: -0.006em;
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+  #mw-quiz-quote figcaption {
+    margin-top: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #mw-quiz-quote,
+    #mw-quiz-quote.swapping {
+      transition: none;
+    }
   }
 
   /* one step dissolves into the next */
@@ -261,6 +300,7 @@ import { QUIZ_COPY } from '../data/quiz';
     worldForProfile,
     type SurveyAnswers,
   } from '../data/quiz';
+  import { pickQuoteForFigures, type FigureQuote } from '../data/quotes';
   import { MW, emit, on } from '../scripts/events';
 
   function init() {
@@ -268,6 +308,7 @@ import { QUIZ_COPY } from '../data/quiz';
     const head = document.getElementById('mw-quiz-head');
     const host = document.getElementById('mw-quiz-host');
     const done = document.getElementById('mw-quiz-done');
+    const quoteBox = document.getElementById('mw-quiz-quote');
     if (!root || !head || !host || !done) return;
 
     const prefersReduced = window.matchMedia(
@@ -275,6 +316,49 @@ import { QUIZ_COPY } from '../data/quiz';
     ).matches;
 
     const answers: SurveyAnswers = {};
+
+    // Stable id for this response so every save (capture, each step, completion)
+    // upserts the same Firestore row — an abandoned flow still leaves its data.
+    let responseId = '';
+    const newResponseId = () => {
+      try {
+        return crypto.randomUUID();
+      } catch {
+        return `r-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+    };
+
+    /* Progress save. Never blocks the UI, never surfaces errors; one silent
+       retry. `status:'complete'` on the final call. Resolves to the parsed
+       response body (or null) so `finish()` can read back the welcome quote;
+       every other caller ignores the promise. */
+    function saveProgress(
+      status: 'partial' | 'complete',
+    ): Promise<Record<string, any> | null> {
+      if (!responseId) return Promise.resolve(null);
+      const payload = JSON.stringify({
+        responseId,
+        status,
+        age: answers.age ?? '',
+        gender: answers.gender ?? '',
+        life: answers.life ?? '',
+        inspires: answers.inspires ?? [],
+        phone: answers.phone ?? '',
+        email: answers.email ?? '',
+        company: answers.company ?? '',
+      });
+      const post = () =>
+        fetch('/api/survey', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        });
+      const parse = (r: Response) => (r.ok ? r.json().catch(() => null) : null);
+      return post()
+        .then((r) => (r.ok ? parse(r) : post().then(parse)))
+        .catch(() => post().then(parse).catch(() => null));
+    }
 
     function goNext(i: number) {
       if (i < STEPS.length - 1) renderStep(i + 1);
@@ -348,6 +432,7 @@ import { QUIZ_COPY } from '../data/quiz';
                 for (const gg of data.groups) {
                   answers[gg.key] = picks[gg.key];
                 }
+                saveProgress('partial');
                 dissolve(() => goNext(i));
               }
             });
@@ -381,7 +466,15 @@ import { QUIZ_COPY } from '../data/quiz';
               b.setAttribute('aria-pressed', 'false');
               chosen.splice(chosen.indexOf(opt.name), 1);
             } else {
-              if (chosen.length >= data.pick) return; // cap at two
+              if (chosen.length >= data.pick) {
+                // at the cap: drop the oldest pick to make room
+                const oldest = chosen.shift()!;
+                for (const el of grid.querySelectorAll('.fig')) {
+                  if (el.querySelector('.fig-name')?.textContent === oldest) {
+                    el.setAttribute('aria-pressed', 'false');
+                  }
+                }
+              }
               b.setAttribute('aria-pressed', 'true');
               chosen.push(opt.name);
             }
@@ -409,6 +502,7 @@ import { QUIZ_COPY } from '../data/quiz';
           b.textContent = opt.label;
           b.addEventListener('click', () => {
             answers.life = opt.label;
+            saveProgress('partial');
             dissolve(() => goNext(i));
           });
           group.appendChild(b);
@@ -434,6 +528,27 @@ import { QUIZ_COPY } from '../data/quiz';
         ?.focus();
     }
 
+    /* Show a motivational quote from a chosen figure under the welcome banner —
+       a taste of what the visitor will be getting. `animate` fades the swap when
+       the server's pick replaces the instant local fallback. */
+    function renderQuote(q: FigureQuote | null, animate = false) {
+      if (!quoteBox || !q || typeof q.text !== 'string') return;
+      const apply = () => {
+        quoteBox.querySelector('blockquote')!.textContent = `“${q.text}”`;
+        const cap = quoteBox.querySelector('figcaption') as HTMLElement;
+        cap.textContent = q.attribution ? `— ${q.attribution}` : '';
+        cap.hidden = !q.attribution;
+        quoteBox.hidden = false;
+        quoteBox.classList.remove('swapping');
+      };
+      if (animate && !quoteBox.hidden && !prefersReduced) {
+        quoteBox.classList.add('swapping');
+        window.setTimeout(apply, 180);
+      } else {
+        apply();
+      }
+    }
+
     function finish() {
       host!.innerHTML = '';
       head!.hidden = true;
@@ -443,33 +558,17 @@ import { QUIZ_COPY } from '../data/quiz';
       const profile = routeProfile(answers);
       const world = worldForProfile(profile);
 
-      // Fire-and-forget: post the full payload once, at completion. The "Welcome
-      // to the community!" state above has already rendered — the UX never waits
-      // on this, and never surfaces a network error. `profile` is recomputed
-      // server-side; what we send here is advisory only. One silent retry.
-      const payload = JSON.stringify({
-        age: answers.age,
-        gender: answers.gender,
-        life: answers.life,
-        inspires: answers.inspires,
-        phone: answers.phone ?? '',
-        email: answers.email ?? '',
-        company: answers.company ?? '',
+      // Render the bundled fallback quote instantly so the banner is never bare.
+      renderQuote(pickQuoteForFigures(answers.inspires ?? []));
+
+      // Final save. "Welcome to the community!" has already rendered — the UX
+      // never waits on this and never surfaces a network error. `profile` is
+      // recomputed server-side; the row was already being built step by step.
+      // The response carries a Firestore-backed quote pick; swap it in if it
+      // arrives.
+      saveProgress('complete').then((res) => {
+        if (res && res.quote) renderQuote(res.quote as FigureQuote, true);
       });
-      const post = () =>
-        fetch('/api/survey', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: payload,
-          keepalive: true,
-        });
-      post()
-        .then((r) => {
-          if (!r.ok) return post();
-        })
-        .catch(() => {
-          post().catch(() => {});
-        });
 
       // TODO: redirect to /home once it exists.
       emit(MW.quizComplete, { answers, profile, world });
@@ -482,6 +581,10 @@ import { QUIZ_COPY } from '../data/quiz';
       answers.phone = detail.phone || undefined;
       answers.email = detail.email || undefined;
       answers.company = detail.company || undefined;
+      // start the response row now — captures contact even if the quiz is
+      // abandoned before the first question.
+      responseId = newResponseId();
+      saveProgress('partial');
       const h2 = head!.querySelector('h2');
       if (h2) {
         h2.textContent =

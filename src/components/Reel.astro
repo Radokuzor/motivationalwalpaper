@@ -463,9 +463,14 @@ import LockScreen from './LockScreen.astro';
       scrollToWorld(detail.world);
     });
 
-    // open the capture sheet
-    cta.addEventListener('click', () => emit(MW.openCapture));
-    reel.addEventListener('click', () => emit(MW.openCapture));
+    // open the capture sheet — re-announce the on-screen wallpaper first so the
+    // sheet's Download hands over exactly what they were looking at
+    const openCapture = () => {
+      if (activeWorld) emit(MW.reelWorld, { world: activeWorld });
+      emit(MW.openCapture);
+    };
+    cta.addEventListener('click', openCapture);
+    reel.addEventListener('click', openCapture);
   }
 
   init();

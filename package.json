@@ -12,7 +12,8 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "seed:quotes": "node scripts/seed-quotes.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^8.2.11",
