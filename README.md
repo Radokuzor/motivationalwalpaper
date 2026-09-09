@@ -146,3 +146,4 @@ curl -X POST http://localhost:4321/api/survey -H 'content-type: application/json
 - `design/screen-one-build-brief.md` — the Screen One spec
 - `design/who-youre-becoming.html` — brand-bible visual companion
 - `design/screen-one.html` — the original single-file prototype
+# motivationalwalpaper
