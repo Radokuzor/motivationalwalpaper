@@ -45,6 +45,12 @@ export interface QuizCompleteDetail {
 
 export interface WorldDetail {
   world: WorldKey;
+  /** Set only on `reelWorld`, and only when a specific uploaded photo was
+   *  tapped (a category-grid tile backed by a real asset) — the download
+   *  target becomes that exact file, no gradient/text render. Absent (or
+   *  explicitly cleared) means "download world's hero photo, or its
+   *  gradient if it has none yet". */
+  asset?: { id: string; originalUrl: string };
 }
 
 interface MwEventMap {

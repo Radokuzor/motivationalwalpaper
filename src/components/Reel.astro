@@ -95,6 +95,11 @@ import LockScreen from './LockScreen.astro';
     background: linear-gradient(0deg, var(--scrim), transparent);
   }
 
+  /* a real uploaded photo is used as-is — no quote stamped on top of it */
+  .panel.has-photo :global(.wp-line) {
+    display: none;
+  }
+
   /* the wallpaper line settles in as its panel lands (§09) — owned here so it
      can key off `.panel.is-live` (added by the observer). */
   .panel :global(.wp-line) {
@@ -304,6 +309,9 @@ import LockScreen from './LockScreen.astro';
       font-weight: 500;
       text-wrap: balance;
     }
+    .reel-preview.has-photo .preview-line {
+      display: none;
+    }
     .reel-preview[data-world="stoic"] .preview-line {
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -381,14 +389,17 @@ import LockScreen from './LockScreen.astro';
     reel.scrollTop = firstReal.offsetTop;
 
     // real photo, when a category has one preferred — replaces the CSS
-    // gradient on every panel for that world, clones included. Progressive:
-    // resolves to `{}` on any failure and every panel keeps its gradient.
+    // gradient on every panel for that world, clones included, and hides the
+    // quote line (a real photo is used as-is, no text stamped on it).
+    // Progressive: resolves to `{}` on any failure and every panel keeps its
+    // gradient + line.
     getHeroMap().then((hero) => {
       for (const [key, asset] of Object.entries(hero)) {
         if (!asset) continue;
-        reel!
-          .querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`)
-          .forEach((p) => p.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`));
+        reel!.querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`).forEach((p) => {
+          p.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+          p.classList.add('has-photo');
+        });
       }
     });
 
@@ -479,13 +490,21 @@ import LockScreen from './LockScreen.astro';
       }, 180);
     });
 
-    // desktop cross-fade preview, driven by ThemeGrid
+    // desktop cross-fade preview, driven by ThemeGrid — mirrors a reel panel,
+    // real photo (no text) or gradient + line, same as the reel itself
     on(MW.worldHover, (detail) => {
       const w = WORLDS.find((x) => x.key === detail.world);
       if (!w) return;
       preview.dataset.world = w.key;
       preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};--fg:${w.overlay};--line:${w.lineColor};--face:var(--face-${w.key});`;
       previewLine.textContent = w.line;
+      preview.classList.remove('has-photo');
+      getHeroMap().then((hero) => {
+        const asset = hero[w.key];
+        if (!asset || preview.dataset.world !== w.key) return;
+        preview.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+        preview.classList.add('has-photo');
+      });
       preview.classList.add('is-shown');
     });
     on(MW.worldHoverEnd, () => preview.classList.remove('is-shown'));

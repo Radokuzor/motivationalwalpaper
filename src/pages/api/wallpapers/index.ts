@@ -115,15 +115,23 @@ export const POST: APIRoute = async ({ request }) => {
 interface PublicAsset {
   id: string;
   thumbUrl: string;
+  /** Full-quality file — handed straight to the visitor on download, no
+   *  canvas re-render (a real photo is used as-is, no text stamped on it). */
+  originalUrl: string;
   worlds: WorldKey[];
   preferred: boolean;
 }
 
 async function toPublicAsset(doc: FirebaseFirestore.DocumentSnapshot): Promise<PublicAsset> {
   const v = doc.data() ?? {};
+  const [thumbUrl, originalUrl] = await Promise.all([
+    signedUrl(v.storageThumb ?? thumbPath(doc.id), 30 * 60 * 1000),
+    signedUrl(v.storageOriginal, 30 * 60 * 1000),
+  ]);
   return {
     id: doc.id,
-    thumbUrl: await signedUrl(v.storageThumb ?? thumbPath(doc.id), 30 * 60 * 1000),
+    thumbUrl,
+    originalUrl,
     worlds: (v.worlds ?? []) as WorldKey[],
     preferred: v.preferred === true,
   };

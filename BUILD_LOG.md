@@ -88,7 +88,7 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
 | **Admin page** | Spec'd in `admin-build-brief.md`, not built. `/admin` SSR + Basic Auth + table + CSV export over `survey_responses`. |
 | **Category display names** | Resolved 2026-09-10 — see History. Internal `WorldKey`/`profile` values unchanged; only the user-facing `name` changed. |
 | **`/gallery`** | Still the `noindex` skeleton — real per-category browsing (images, per-item copy) not built. Header "Categories" links point to `/gallery#<slug>` anchors, which exist now but the page itself is still a placeholder. |
-| **Storage bucket CORS** | Hero photos render on-screen (CSS backgrounds, no CORS needed) regardless, but baking one into the exported PNG needs the Firebase Storage bucket to serve `Access-Control-Allow-Origin` on signed-URL reads. Unconfigured today → `downloadWallpaper()` silently falls back to the gradient for that world. Fix: `gsutil cors set <file> gs://<bucket>` allowing the site origin. |
+| **Storage bucket CORS** | **Done 2026-09-11.** `motivewallpaper-220e4`'s default bucket had no CORS config, which silently blocked `fetch()`-then-download of a real photo's original file (`downloadOriginal()` in `wallpaper.ts`). Set via a one-off script using the existing Admin SDK credentials (`bucket.setCorsConfiguration`) — `GET` allowed from `motivationalwallpaper.com`, `www.`, and `localhost:4321`. Verified against the real bucket + a real download. |
 | **Uncommitted** | `Quiz.astro`, `Reel.astro`, `api/survey.ts`, `404.astro`, `gallery.astro` (progressive save + download-target + "world" copy). |
 
 ## Wallpaper pipeline
@@ -132,22 +132,32 @@ or have licensed.
   `license:'owner-supplied'`, `width`/`height`/`aspect`, `bytes`, `format`,
   `phash`, `storageOriginal`, `storageThumb`, `createdAt`/`updatedAt`.
 
-**Hero photos — built 2026-09-11.** A `preferred` asset becomes its world's
-real wallpaper everywhere, replacing `src/data/worlds.ts`'s CSS gradient:
-`Reel.astro` panels (+ their loop clones), `ThemeGrid.astro` cards, and
-`CategoryGrid.astro`'s backdrop (cascades to all 12 tiles via CSS custom
-property inheritance) swap `--art` to the signed `thumbUrl` once
-`src/scripts/hero.ts`'s `getHeroMap()` resolves — pure progressive
-enhancement, gradient stays until/unless it resolves. `downloadWallpaper()`
-in `wallpaper.ts` additionally tries to bake the **original**-quality photo
-into the exported PNG, probing CORS-cleanliness on a disposable canvas first
-(`isCorsClean`) and falling back to the gradient if the Storage bucket
-hasn't got CORS configured for the export step specifically (on-screen CSS
-backgrounds need no CORS at all — only the canvas export does).
+**Hero photos — built 2026-09-11, no text on real photos.** A `preferred`
+asset becomes its world's real wallpaper on `Reel.astro` panels (+ loop
+clones) and `ThemeGrid.astro` cards, replacing the CSS gradient — `--art`
+swaps to the signed `thumbUrl` once `src/scripts/hero.ts`'s `getHeroMap()`
+resolves (pure progressive enhancement; gradient stays until/unless it
+resolves). A real photo is used **as-is, no quote stamped on it** — the
+`.wp-line`/`.preview-line` text is hidden (`.has-photo` class) wherever a
+hero photo is showing; only a still-gradient world keeps its line.
+`downloadWallpaper()` hands over the hero's **original**-quality file
+untouched (`downloadOriginal()` — fetch → blob → save, no canvas at all) —
+only a world with no photo yet falls back to the gradient+line canvas
+render.
 
-**Not built:** per-world/per-category manual ordering beyond preferred-first;
-pairing a wallpaper with its own custom line (grid tiles still show the
-world's fixed 12 `gridLines` over whichever photo is preferred).
+**`CategoryGrid.astro` browses real photos, not text variants.** Opens
+instantly with the world's 12 gradient/quote placeholder tiles, then
+`GET /api/wallpapers?world=<key>` resolves and — if that category has any
+real photos, preferred or not — replaces them with one tile per photo, no
+text, however many exist (1, 3, 20…). Tapping a tile hands over *that exact
+file* via `mw:reel-world`'s new optional `asset: {id, originalUrl}`
+(`src/scripts/events.ts`), which `CaptureSheet.astro` downloads with
+`downloadOriginal()` instead of re-deriving the world's hero — important
+once a category has more than one photo and a non-preferred one is tapped.
+A category with zero real photos still shows the 12 placeholder tiles.
+
+**Not built:** per-world/per-category manual tile ordering beyond
+preferred-first; a way to give an individual photo its own caption/line.
 
 ## SEO & blog
 
@@ -221,12 +231,29 @@ says "wallpapers" / "looks", never "world".
   `normalizeWorlds`, both API routes, the submit page's checkbox UI). Added a
   **Preferred** flag per asset and a public `GET /api/wallpapers` (list by
   world, `?hero=1` map) so an upload is visible on the live site immediately.
-  Wired preferred photos in as each world's real hero image, replacing the
-  CSS gradient in the reel/theme grid/category grid/PNG export (see
-  "Hero photos" under Wallpaper pipeline) — new `src/scripts/hero.ts`.
-  Added the reel auto-advance timer (see Screen One, above). Smoke-tested
-  end to end against the real `motivewallpaper-220e4` project (multi-world
-  upload, hero map, PATCH validation, delete) — test row cleaned up after.
+  Wired preferred photos in as each world's real hero image on the reel/
+  theme grid, and set the Storage bucket's CORS config so a real photo's
+  original file can actually be fetched for download (see "Hero photos" /
+  "Storage bucket CORS" under Wallpaper pipeline) — new `src/scripts/hero.ts`.
+  Added the reel auto-advance timer (see Screen One, above).
+
+  **Revised same day**, per explicit direction that real photos won't need
+  any text stamped on them: dropped the canvas photo-compositing path
+  entirely (`drawCover`/`isCorsClean`/`loadImage` in `wallpaper.ts` deleted —
+  a real photo now downloads via `downloadOriginal()`, a plain fetch → blob →
+  save, unmodified) and hid the quote line wherever a hero photo shows
+  (`.has-photo` on the reel panel / hover preview). Reworked
+  `CategoryGrid.astro` from "12 fixed text-variant tiles" to "one tile per
+  real uploaded photo" once any exist for that category — tapping a tile now
+  carries a specific `asset` through `mw:reel-world` (`events.ts`) so
+  `CaptureSheet.astro` downloads exactly the photo that was tapped, not just
+  the world's hero. A category with no real photos yet is unaffected — still
+  12 gradient/quote placeholder tiles.
+
+  Smoke-tested end to end against the real `motivewallpaper-220e4` project
+  (multi-world upload, hero map, PATCH validation, category-grid photo tiles,
+  a real browser download landing as `.jpg` not `.png`, delete) — test rows
+  cleaned up after each run.
 
 - **2026-09-10** — Category display names renamed for relatability: Stoic→Gym,
   Soft Life→Self Love, Scripture→Faith, Builder→Entrepreneurship,

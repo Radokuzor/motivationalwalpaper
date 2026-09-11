@@ -1,16 +1,17 @@
 /**
- * Client-side wallpaper export.
+ * Client-side wallpaper download.
  *
  * Each world is a CSS gradient + a one-line message (see `src/data/worlds.ts`)
  * unless the operator has marked a real uploaded photo `preferred` for it
- * (`GET /api/wallpapers?hero=1`) — then that photo replaces the gradient.
- * `downloadWallpaper()` paints the chosen world onto an off-screen canvas at
- * phone-lock-screen resolution and hands the visitor a PNG: gradient-or-photo
- * art + the line, with none of the iOS mock chrome (clock, padlock, dynamic
- * island).
+ * (`GET /api/wallpapers?hero=1`). A real photo is downloaded exactly as
+ * uploaded — `downloadOriginal()` just fetches and saves it, no text stamped
+ * on top. Only a gradient world still gets `downloadWallpaper()`'s canvas
+ * render: gradient + line, phone-lock-screen resolution, none of the iOS mock
+ * chrome (clock, padlock, dynamic island).
  *
- * Called by CaptureSheet.astro on submit; the target world is whatever is
- * centred in the reel (Reel.astro broadcasts `mw:reel-world`).
+ * Called by CaptureSheet.astro on submit; the target world (and, for a
+ * specific tapped photo, the exact asset) is whatever Reel.astro or
+ * CategoryGrid.astro last broadcast via `mw:reel-world`.
  */
 import { WORLDS, type WorldKey } from '../data/worlds';
 import { getHeroMap } from './hero';
@@ -137,42 +138,35 @@ function paintArt(ctx: CanvasRenderingContext2D, art: string): void {
   ctx.fillRect(0, 0, W, H);
 }
 
-/** `background-size: cover; background-position: center` for a canvas. */
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement): void {
-  const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-  const w = img.naturalWidth * scale;
-  const h = img.naturalHeight * scale;
-  ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-}
-
-function loadImage(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
+const MIME_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+};
 
 /**
- * Probe on a disposable 1×1 canvas whether this image can be read back
- * without a SecurityError — i.e. whether the response actually carried CORS
- * headers. A canvas that ever taints stays tainted for its lifetime, so this
- * must run on a throwaway canvas, never on the real export canvas.
+ * Fetch a file and hand the visitor a save dialog for it, unmodified — used
+ * for a real uploaded photo, which is never re-rendered or stamped with
+ * text. Needs the Storage bucket to serve CORS for `fetch()` to read the
+ * bytes back; best-effort (silently no-ops if the fetch fails).
  */
-function isCorsClean(img: HTMLImageElement): boolean {
-  const probe = document.createElement('canvas');
-  probe.width = 1;
-  probe.height = 1;
-  const pctx = probe.getContext('2d');
-  if (!pctx) return false;
-  pctx.drawImage(img, 0, 0, 1, 1);
+export async function downloadOriginal(url: string, filenameBase: string): Promise<void> {
   try {
-    pctx.getImageData(0, 0, 1, 1);
-    return true;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const ext = MIME_EXT[blob.type] ?? 'jpg';
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = `${filenameBase}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
   } catch {
-    return false;
+    /* best-effort — a failed fetch just means no download fires */
   }
 }
 
@@ -249,10 +243,21 @@ async function drawLine(ctx: CanvasRenderingContext2D, w: World): Promise<void> 
   lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lineHeight));
 }
 
-/** Render the given world's plain wallpaper and trigger a PNG download. */
+/**
+ * Download the given world's wallpaper. A preferred real photo is handed
+ * over exactly as uploaded — full quality, no text stamped on it. Only a
+ * world with no photo yet falls back to rendering its CSS gradient + line
+ * onto a canvas.
+ */
 export async function downloadWallpaper(key: WorldKey): Promise<void> {
   const w = WORLDS.find((x) => x.key === key);
   if (!w) return;
+
+  const hero = (await getHeroMap())[key];
+  if (hero) {
+    await downloadOriginal(hero.originalUrl, `motivationalwallpaper-${w.slug}`);
+    return;
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -260,16 +265,7 @@ export async function downloadWallpaper(key: WorldKey): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  // a preferred real photo, full quality, replaces the CSS gradient when the
-  // operator has set one for this world — falls back silently on any failure
-  // (no hero yet, network error, or the bucket lacking CORS for canvas export)
-  const hero = (await getHeroMap())[key];
-  const photo = hero ? await loadImage(hero.originalUrl) : null;
-  if (photo && isCorsClean(photo)) {
-    drawCover(ctx, photo);
-  } else {
-    paintArt(ctx, w.art);
-  }
+  paintArt(ctx, w.art);
   await drawLine(ctx, w);
 
   await new Promise<void>((resolve) => {

@@ -308,7 +308,7 @@ import Quiz from './Quiz.astro';
 
 <script>
   import { MW, emit, on } from '../scripts/events';
-  import { downloadWallpaper } from '../scripts/wallpaper';
+  import { downloadWallpaper, downloadOriginal } from '../scripts/wallpaper';
   import type { WorldKey } from '../data/worlds';
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -341,10 +341,15 @@ import Quiz from './Quiz.astro';
 
     let mode: 'phone' | 'email' = 'phone'; // option 1 by default
     let lastFocused: HTMLElement | null = null;
-    // the wallpaper currently centred in the reel — the Download target
+    // the wallpaper currently centred in the reel — the Download target.
+    // `currentAsset` is set only when a category-grid tile for a specific
+    // real photo was tapped; any other announcement (the reel itself, a
+    // gradient-placeholder tile) explicitly clears it.
     let currentWorld: WorldKey = 'stoic';
+    let currentAsset: { id: string; originalUrl: string } | null = null;
     on(MW.reelWorld, (d) => {
       currentWorld = d.world;
+      currentAsset = d.asset ?? null;
     });
 
     const focusables = () =>
@@ -455,7 +460,11 @@ import Quiz from './Quiz.astro';
 
       // hand over the wallpaper they're looking at — non-blocking, and the flow
       // proceeds whether or not the download starts
-      void downloadWallpaper(currentWorld);
+      if (currentAsset) {
+        void downloadOriginal(currentAsset.originalUrl, `motivationalwallpaper-${currentWorld}`);
+      } else {
+        void downloadWallpaper(currentWorld);
+      }
 
       viewCapture.hidden = true;
       emit(MW.captureSubmit, {
