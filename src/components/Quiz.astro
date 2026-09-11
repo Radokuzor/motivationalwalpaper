@@ -302,6 +302,7 @@ import { QUIZ_COPY } from '../data/quiz';
   } from '../data/quiz';
   import { pickQuoteForFigures, type FigureQuote } from '../data/quotes';
   import { MW, emit, on } from '../scripts/events';
+  import { trackAction } from '../scripts/analyticsTracker';
 
   function init() {
     const root = document.getElementById('mw-quiz');
@@ -571,6 +572,7 @@ import { QUIZ_COPY } from '../data/quiz';
       });
 
       // TODO: redirect to /home once it exists.
+      trackAction('Completed quiz');
       emit(MW.quizComplete, { answers, profile, world });
     }
 

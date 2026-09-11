@@ -63,6 +63,23 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
   write), `updatedAt` (every write), `completedAt` (on complete).
 - Beehiiv / SMS **deferred** — the `'pending'` stamps are the only hook.
 
+### `POST /api/analytics/session-end` (`src/pages/api/analytics/session-end.ts`, `prerender = false`)
+
+- Fired once per browser tab session, on the way out, by
+  `src/scripts/analyticsTracker.ts` (mounted globally from `BaseLayout.astro`,
+  skipping `/admin`/`/dashboard`) via `navigator.sendBeacon`. Stateless — no
+  session is persisted server-side, the payload carries the whole page chain.
+- Bad JSON → 400. Empty `pages`, or missing `startedAt`/`endedAt` → `200
+  {ok:true}`, no notify. Bounces (duration <3s, ≤1 page, max scroll <10%) →
+  same, silently dropped.
+- Relays via `notifyTelegram()` (`src/lib/telegram.ts`, no-ops if
+  `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` unset): site name, duration, page
+  chain, max scroll %, on-site actions (download / quiz complete / email or
+  phone submitted / article read — via `trackAction()`), referrer. Flags
+  `/checkout` reached without `purchased: true` as "⚠️ Checkout abandoned"
+  instead of "👀 Visitor session". User-controlled text (paths, referrer,
+  actions) is Markdown-escaped before going into the message.
+
 ## Verified
 
 - `npm run build` clean on Astro 5 / adapter v8; every page prerenders, only
@@ -81,6 +98,7 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
 | Item | Notes |
 |---|---|
 | **Production `/api/survey` check** | Confirm `FIREBASE_*` env vars are set in Vercel — otherwise every submit fails silently. `curl` the live URL, expect a row. |
+| **Production Telegram check** | Set `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` in Vercel (all environments) — otherwise `notifyTelegram()` silently no-ops and no visitor-session notifications arrive. Browse the live site past the bounce threshold and confirm a Telegram message lands. |
 | **Real-browser E2E** | Run reel → Download → capture → quiz → Welcome on the live site. Eyeball the PNG (radial gradients Stoic/Builder are approximated; display fonts load within 400ms or fall back). |
 | **Vercel Node version** | Set Project Settings → Node.js Version → 22.x (matches `engines.node`). |
 | **Custom domain** | `astro.config.mjs` hard-codes `site: 'https://motivationalwallpaper.com'` for canonical/sitemap. Attach the domain or update `site`. |
@@ -225,6 +243,28 @@ marcus, sarah, james, jerome, grace, diane). **Not user-facing** — public copy
 says "wallpapers" / "looks", never "world".
 
 ## History
+
+- **2026-09-11** — Telegram visitor-session notifier: `src/lib/telegram.ts`
+  (`notifyTelegram`, server-only, no-ops if `TELEGRAM_BOT_TOKEN`/
+  `TELEGRAM_CHAT_ID` unset) + `POST /api/analytics/session-end`
+  (`src/pages/api/analytics/session-end.ts`) relays a visitor's page chain,
+  duration, max scroll, on-site actions, and referrer to Telegram, flagging
+  `/checkout` reached without a purchase as "Checkout abandoned"; bounces
+  (<3s, ≤1 page, <10% scroll) are dropped. Client side is
+  `src/scripts/analyticsTracker.ts`, mounted globally from
+  `BaseLayout.astro` — since this is a static multi-page site (no client
+  router), "route change" means "new page load": session id/start/referrer/
+  page-chain/action list live in `sessionStorage` and carry across loads in
+  the same tab, with a same-origin link-click hook that closes out the
+  current page and flags the session as "continuing" *before* unload, so the
+  `pagehide`/`visibilitychange` beacon only actually fires once, on
+  whichever load turns out to be the session's last one. `trackAction()` is
+  wired into the existing flows that already exist (no new features added
+  to reach them): wallpaper download + email/phone capture in
+  `CaptureSheet.astro`, quiz completion in `Quiz.astro`, blog article reads
+  in `blog/[slug].astro`. `/admin` and `/dashboard` paths are excluded
+  (neither exists yet). No checkout flow exists yet either — `markPurchased()`
+  is exported from the tracker for whenever one is built to call on success.
 
 - **2026-09-11** — `/submit` reworked for multi-category tagging: `world`
   (single key) → `worlds: WorldKey[]` end to end (`wallpaperAssets.ts`'s

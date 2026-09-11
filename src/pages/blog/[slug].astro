@@ -74,7 +74,7 @@ const faqJsonLd = faqs?.length
     <a href="/blog">Blog</a><span aria-hidden="true"> / </span><span>{category}</span>
   </nav>
 
-  <article class="post">
+  <article class="post" data-blog-title={title}>
     <header class="post__head">
       <span class="post__eyebrow">{category}</span>
       <h1>{title}</h1>
@@ -225,3 +225,10 @@ const faqJsonLd = faqs?.length
     font-weight: 600;
   }
 </style>
+
+<script>
+  import { trackAction } from '../../scripts/analyticsTracker';
+
+  const title = document.querySelector('[data-blog-title]')?.getAttribute('data-blog-title');
+  if (title) trackAction(`Read article: ${title}`);
+</script>

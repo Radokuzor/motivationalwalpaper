@@ -309,6 +309,7 @@ import Quiz from './Quiz.astro';
 <script>
   import { MW, emit, on } from '../scripts/events';
   import { downloadOriginal } from '../scripts/wallpaper';
+  import { trackAction } from '../scripts/analyticsTracker';
   import type { WorldKey } from '../data/worlds';
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -463,6 +464,10 @@ import Quiz from './Quiz.astro';
       // this is just a defensive no-op if it somehow isn't.
       if (currentAsset) {
         void downloadOriginal(currentAsset.originalUrl, `motivationalwallpaper-${currentWorld}`);
+        trackAction('Downloaded wallpaper');
+      }
+      if (v) {
+        trackAction(mode === 'phone' ? 'Submitted phone' : 'Submitted email');
       }
 
       viewCapture.hidden = true;

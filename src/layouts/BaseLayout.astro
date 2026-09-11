@@ -79,5 +79,9 @@ const FONTS_HREF =
   <body class={bodyClass}>
     <slot />
     <Analytics />
+    <script>
+      import { initAnalyticsTracker } from '../scripts/analyticsTracker';
+      initAnalyticsTracker();
+    </script>
   </body>
 </html>
