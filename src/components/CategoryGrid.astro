@@ -2,16 +2,16 @@
 /**
  * CategoryGrid — the slide-up wallpaper grid for one world (Instagram-style).
  *
- * Opened by CategoryRail (mobile/tablet) or a ThemeGrid card (desktop). A
- * Opens instantly showing the world's 12 gradient/quote placeholder tiles,
- * then swaps in one tile per real uploaded photo (`GET /api/wallpapers?world=`)
- * once that resolves — a real-photo tile has no text on it and hands over
- * that *exact* file on tap, not a gradient/text render. A world with no
- * uploaded photos yet just keeps the placeholder tiles.
+ * Opened by CategoryRail (mobile/tablet) or a ThemeGrid card (desktop). Opens
+ * showing the world's real uploaded photos (`GET /api/wallpapers?world=`) —
+ * no placeholder/quote tiles. Tapping a tile hands over that *exact* file: it
+ * is pushed onto the reel panel behind the capture sheet (so what's on screen
+ * is what gets downloaded), then the capture flow opens. A world with no
+ * uploaded photos yet just shows an empty grid until one lands.
  *
  *  - listens mw:category-open  { world }
- *  - emits   mw:reel-world     { world, asset? }  (set the download target)
- *  - emits   mw:open-capture                      (start the capture flow)
+ *  - emits   mw:asset-select   { world, asset }  (Reel renders it + re-announces mw:reel-world)
+ *  - emits   mw:open-capture                     (start the capture flow)
  *
  * Chrome (header, ground) themes light/dark from §04 tokens; the tiles are
  * artwork and stay fixed-colour.
@@ -153,52 +153,7 @@ import SiteHeader from './SiteHeader.astro';
     border: 0;
     padding: 0;
     background: var(--art);
-    color: var(--fg);
     cursor: pointer;
-  }
-  .grid-strip :global(.grid-tile)::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(
-      180deg,
-      var(--scrim),
-      transparent 40%,
-      transparent 60%,
-      var(--scrim)
-    );
-    opacity: 0.55;
-  }
-  .grid-strip :global(.grid-tile span) {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    padding: 12px 9px;
-    font-family: var(--face);
-    color: var(--line, var(--fg));
-    font-size: 11px;
-    line-height: 1.32;
-    font-weight: 500;
-    text-align: center;
-    text-wrap: balance;
-    text-shadow: var(--label-shadow);
-  }
-  .grid-view[data-world="stoic"] .grid-strip :global(.grid-tile span) {
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .grid-view[data-world="builder"] .grid-strip :global(.grid-tile span) {
-    font-weight: 800;
-    letter-spacing: -0.01em;
-  }
-  .grid-view[data-world="scripture"] .grid-strip :global(.grid-tile span) {
-    font-weight: 600;
-  }
-  .grid-view[data-world="rebuild"] .grid-strip :global(.grid-tile span) {
-    font-style: italic;
   }
   .grid-strip :global(.grid-tile:focus-visible) {
     outline: 2px solid #fff;
@@ -269,27 +224,14 @@ import SiteHeader from './SiteHeader.astro';
       tile.setAttribute('aria-label', `${w!.name} wallpaper ${i + 1}`);
       tile.style.setProperty('--art', `url("${item.thumbUrl}") center/cover no-repeat`);
       tile.addEventListener('click', () => {
-        // hand this exact photo to the capture flow — no gradient/text render
-        emit(MW.reelWorld, { world: key, asset: { id: item.id, originalUrl: item.originalUrl } });
+        // hand this exact photo to the reel (so it's what's on screen) and
+        // the capture flow (so it's what gets downloaded) — no gradient/text render
+        emit(MW.assetSelect, {
+          world: key,
+          asset: { id: item.id, thumbUrl: item.thumbUrl, originalUrl: item.originalUrl },
+        });
         emit(MW.openCapture);
         returnFocus = null; // the capture sheet manages focus now
-        closeGrid();
-      });
-      return tile;
-    }
-
-    function placeholderTile(w: ReturnType<typeof worldByKey>, key: WorldKey, text: string) {
-      const tile = document.createElement('button');
-      tile.type = 'button';
-      tile.className = 'grid-tile';
-      tile.setAttribute('aria-label', `${w!.name} wallpaper — “${text}”`);
-      const span = document.createElement('span');
-      span.textContent = text;
-      tile.appendChild(span);
-      tile.addEventListener('click', () => {
-        emit(MW.reelWorld, { world: key });
-        emit(MW.openCapture);
-        returnFocus = null;
         closeGrid();
       });
       return tile;
@@ -299,13 +241,11 @@ import SiteHeader from './SiteHeader.astro';
       const w = worldByKey(key);
       if (!w) return;
 
-      // placeholder tiles first — opens instantly, no loading state
       strip!.textContent = '';
-      w.gridLines.forEach((text) => strip!.appendChild(placeholderTile(w, key, text)));
       nameEl!.textContent = w.name;
-      countEl!.textContent = `${w.gridLines.length} wallpapers`;
+      countEl!.textContent = 'Loading…';
       view!.dataset.world = key;
-      view!.style.cssText = `--art:${w.art};--scrim:${w.scrim};--fg:${w.overlay};--line:${w.lineColor};--face:var(--face-${key});`;
+      view!.style.cssText = `--art:${w.art};--scrim:${w.scrim};--face:var(--face-${key});`;
       view!.hidden = false;
       returnFocus = document.activeElement as HTMLElement | null;
       document.body.classList.add('mw-grid-open');
@@ -313,19 +253,21 @@ import SiteHeader from './SiteHeader.astro';
       document.addEventListener('keydown', onKey);
       setTimeout(() => back!.focus(), 60);
 
-      // real uploaded photos, once fetched, replace the placeholders entirely
-      // — bail if the visitor already switched categories by the time this lands
+      // real uploaded photos only — bail if the visitor already switched
+      // categories by the time this lands
       fetch(`/api/wallpapers?world=${key}`)
         .then((res) => (res.ok ? res.json() : { items: [] }))
         .then((data: { items?: PublicAsset[] }) => {
           const items = data.items ?? [];
-          if (!items.length || view!.dataset.world !== key) return;
+          if (view!.dataset.world !== key) return;
           strip!.textContent = '';
           items.forEach((item, i) => strip!.appendChild(photoTile(w, key, item, i)));
-          countEl!.textContent = `${items.length} wallpaper${items.length === 1 ? '' : 's'}`;
+          countEl!.textContent = items.length
+            ? `${items.length} wallpaper${items.length === 1 ? '' : 's'}`
+            : 'No wallpapers yet';
         })
         .catch(() => {
-          /* no real photos yet, or the fetch failed — placeholders stay put */
+          if (view!.dataset.world === key) countEl!.textContent = 'No wallpapers yet';
         });
     }
 

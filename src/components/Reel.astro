@@ -37,7 +37,6 @@ import LockScreen from './LockScreen.astro';
   <div class="reel-dots" id="reel-dots" role="presentation"></div>
   <div class="reel-preview" id="reel-preview" aria-hidden="true">
     <div class="preview-wall"></div>
-    <p class="preview-line"></p>
   </div>
   <div class="bottom-scrim" aria-hidden="true"></div>
 </div>
@@ -93,38 +92,6 @@ import LockScreen from './LockScreen.astro';
   .wall::after {
     bottom: 0;
     background: linear-gradient(0deg, var(--scrim), transparent);
-  }
-
-  /* a real uploaded photo is used as-is — no quote stamped on top of it */
-  .panel.has-photo :global(.wp-line) {
-    display: none;
-  }
-
-  /* the wallpaper line settles in as its panel lands (§09) — owned here so it
-     can key off `.panel.is-live` (added by the observer). */
-  .panel :global(.wp-line) {
-    opacity: 0;
-  }
-  :global(html.no-js) .panel :global(.wp-line) {
-    opacity: 1;
-  }
-  .panel.is-live :global(.wp-line) {
-    opacity: 1;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .panel.is-live :global(.wp-line) {
-      animation: settle 0.4s ease-out both;
-    }
-  }
-  @keyframes settle {
-    from {
-      opacity: 0;
-      transform: scale(1.02);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
   }
 
   /* ---- reel chrome ---- */
@@ -294,35 +261,6 @@ import LockScreen from './LockScreen.astro';
         var(--scrim)
       );
     }
-    .preview-line {
-      position: absolute;
-      top: 58%;
-      left: 0;
-      right: 0;
-      margin: 0;
-      padding: 0 12%;
-      text-align: center;
-      font-family: var(--face);
-      color: var(--line, var(--fg));
-      font-size: clamp(1.5rem, 3.4vw, 2.3rem);
-      line-height: 1.2;
-      font-weight: 500;
-      text-wrap: balance;
-    }
-    .reel-preview.has-photo .preview-line {
-      display: none;
-    }
-    .reel-preview[data-world="stoic"] .preview-line {
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .reel-preview[data-world="rebuild"] .preview-line {
-      font-style: italic;
-    }
-    .reel-preview[data-world="scripture"] .preview-line,
-    .reel-preview[data-world="builder"] .preview-line {
-      font-weight: 700;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -365,7 +303,6 @@ import LockScreen from './LockScreen.astro';
     const dotsWrap = document.getElementById('reel-dots') as HTMLElement;
     const reelIndex = frame.querySelector('.reel-index') as HTMLElement | null;
     const preview = document.getElementById('reel-preview') as HTMLElement;
-    const previewLine = preview.querySelector('.preview-line') as HTMLElement;
     const cta = document.getElementById('reel-cta') as HTMLElement;
     const prefersReduced = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -389,19 +326,21 @@ import LockScreen from './LockScreen.astro';
     reel.scrollTop = firstReal.offsetTop;
 
     // real photo, when a category has one preferred — replaces the CSS
-    // gradient on every panel for that world, clones included, and hides the
-    // quote line (a real photo is used as-is, no text stamped on it).
-    // Progressive: resolves to `{}` on any failure and every panel keeps its
-    // gradient + line.
+    // gradient on every panel for that world, clones included (a real photo
+    // is used as-is, no text stamped on it). Progressive: resolves to `{}`
+    // on any failure and every panel keeps its gradient.
     getHeroMap().then((hero) => {
       for (const [key, asset] of Object.entries(hero)) {
         if (!asset) continue;
-        reel!.querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`).forEach((p) => {
-          p.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
-          p.classList.add('has-photo');
-        });
+        setPanelArt(key as WorldKey, asset.thumbUrl);
       }
     });
+
+    function setPanelArt(key: WorldKey, thumbUrl: string) {
+      reel!.querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`).forEach((p) => {
+        p.style.setProperty('--art', `url("${thumbUrl}") center/cover no-repeat`);
+      });
+    }
 
     const loopDistance = () => trailingClone.offsetTop - firstReal.offsetTop;
     function onSettle() {
@@ -434,6 +373,9 @@ import LockScreen from './LockScreen.astro';
     });
 
     let activeWorld: WorldKey | null = null;
+    // set only when a category-grid tile for a specific photo was tapped —
+    // cleared on a natural scroll to a different world's panel.
+    let activeAsset: { id: string; thumbUrl: string; originalUrl: string } | null = null;
     function setActive(key: WorldKey) {
       const idx = REEL_ORDER.indexOf(key);
       if (idx < 0) return;
@@ -443,16 +385,27 @@ import LockScreen from './LockScreen.astro';
       // tell the capture sheet which wallpaper is on screen (download target)
       if (key !== activeWorld) {
         activeWorld = key;
+        activeAsset = null;
         emit(MW.reelWorld, { world: key });
       }
     }
+
+    // a category-grid tile for a specific photo was tapped — put that exact
+    // photo on screen (not just the world's hero) so what's behind the
+    // capture sheet, and what gets downloaded, are the same file.
+    on(MW.assetSelect, (d) => {
+      activeWorld = d.world;
+      activeAsset = d.asset;
+      setPanelArt(d.world, d.asset.thumbUrl);
+      scrollToWorld(d.world);
+      emit(MW.reelWorld, { world: d.world, asset: d.asset });
+    });
 
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(
         (entries) => {
           for (const e of entries) {
             if (e.isIntersecting && e.intersectionRatio >= 0.55) {
-              e.target.classList.add('is-live');
               const key = (e.target as HTMLElement).dataset.world as
                 | WorldKey
                 | undefined;
@@ -464,7 +417,6 @@ import LockScreen from './LockScreen.astro';
       );
       reel.querySelectorAll('.panel').forEach((p) => io.observe(p));
     } else {
-      reel.querySelectorAll('.panel').forEach((p) => p.classList.add('is-live'));
       setActive('stoic');
     }
 
@@ -490,20 +442,17 @@ import LockScreen from './LockScreen.astro';
       }, 180);
     });
 
-    // desktop cross-fade preview, driven by ThemeGrid — mirrors a reel panel,
-    // real photo (no text) or gradient + line, same as the reel itself
+    // desktop cross-fade preview, driven by ThemeGrid — mirrors a reel panel:
+    // real photo when the world has one, its plain gradient otherwise (no text)
     on(MW.worldHover, (detail) => {
       const w = WORLDS.find((x) => x.key === detail.world);
       if (!w) return;
       preview.dataset.world = w.key;
-      preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};--fg:${w.overlay};--line:${w.lineColor};--face:var(--face-${w.key});`;
-      previewLine.textContent = w.line;
-      preview.classList.remove('has-photo');
+      preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};`;
       getHeroMap().then((hero) => {
         const asset = hero[w.key];
         if (!asset || preview.dataset.world !== w.key) return;
         preview.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
-        preview.classList.add('has-photo');
       });
       preview.classList.add('is-shown');
     });
@@ -516,7 +465,9 @@ import LockScreen from './LockScreen.astro';
     // open the capture sheet — re-announce the on-screen wallpaper first so the
     // sheet's Download hands over exactly what they were looking at
     const openCapture = () => {
-      if (activeWorld) emit(MW.reelWorld, { world: activeWorld });
+      if (activeWorld) {
+        emit(MW.reelWorld, { world: activeWorld, asset: activeAsset ?? undefined });
+      }
       emit(MW.openCapture);
     };
     cta.addEventListener('click', openCapture);

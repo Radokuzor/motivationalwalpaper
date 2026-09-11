@@ -1,13 +1,11 @@
 /**
  * Client-side wallpaper download.
  *
- * Each world is a CSS gradient + a one-line message (see `src/data/worlds.ts`)
- * unless the operator has marked a real uploaded photo `preferred` for it
- * (`GET /api/wallpapers?hero=1`). A real photo is downloaded exactly as
- * uploaded — `downloadOriginal()` just fetches and saves it, no text stamped
- * on top. Only a gradient world still gets `downloadWallpaper()`'s canvas
- * render: gradient + line, phone-lock-screen resolution, none of the iOS mock
- * chrome (clock, padlock, dynamic island).
+ * A real uploaded photo is downloaded exactly as uploaded —
+ * `downloadOriginal()` just fetches and saves it, no text stamped on top.
+ * A world with no real photo yet (`GET /api/wallpapers?hero=1` has none for
+ * it) falls back to `downloadWallpaper()`'s canvas render of its plain CSS
+ * gradient, phone-lock-screen resolution — no quote, no iOS mock chrome.
  *
  * Called by CaptureSheet.astro on submit; the target world (and, for a
  * specific tapped photo, the exact asset) is whatever Reel.astro or
@@ -170,83 +168,10 @@ export async function downloadOriginal(url: string, filenameBase: string): Promi
   }
 }
 
-/** Per-world line treatment — mirrors LockScreen.astro `.wp-line` inflections. */
-const INFLECTION: Record<
-  WorldKey,
-  { weight: number; size: number; upper: boolean; italic: boolean; spacing: string }
-> = {
-  stoic: { weight: 500, size: 0.072, upper: true, italic: false, spacing: '0.06em' },
-  soft: { weight: 300, size: 0.072, upper: false, italic: false, spacing: '0.01em' },
-  scripture: { weight: 600, size: 0.088, upper: false, italic: false, spacing: '0em' },
-  builder: { weight: 800, size: 0.072, upper: false, italic: false, spacing: '-0.02em' },
-  aesthetic: { weight: 600, size: 0.072, upper: false, italic: false, spacing: '0em' },
-  rebuild: { weight: 500, size: 0.082, upper: false, italic: true, spacing: '0em' },
-  anime: { weight: 700, size: 0.062, upper: false, italic: false, spacing: '0.02em' },
-};
-
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxW: number,
-): string[] {
-  const words = text.split(/\s+/);
-  const out: string[] = [];
-  let cur = '';
-  for (const word of words) {
-    const test = cur ? `${cur} ${word}` : word;
-    if (ctx.measureText(test).width > maxW && cur) {
-      out.push(cur);
-      cur = word;
-    } else {
-      cur = test;
-    }
-  }
-  if (cur) out.push(cur);
-  return out;
-}
-
-async function drawLine(ctx: CanvasRenderingContext2D, w: World): Promise<void> {
-  const face =
-    getComputedStyle(document.documentElement)
-      .getPropertyValue(`--face-${w.key}`)
-      .trim() || 'system-ui, sans-serif';
-  const infl = INFLECTION[w.key];
-  const fontPx = Math.round(W * infl.size);
-  const font = `${infl.italic ? 'italic ' : ''}${infl.weight} ${fontPx}px ${face}`;
-
-  // let the display face load, but never hang the download on it
-  try {
-    await Promise.race([
-      Promise.all([document.fonts.load(font), document.fonts.ready]),
-      new Promise((r) => setTimeout(r, 400)),
-    ]);
-  } catch {
-    /* fall back to whatever face is ready */
-  }
-
-  ctx.font = font;
-  ctx.fillStyle = w.lineColor;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const withSpacing = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
-  if ('letterSpacing' in withSpacing) withSpacing.letterSpacing = infl.spacing;
-  if (w.labelShadow !== 'none') {
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 2;
-  }
-
-  const text = infl.upper ? w.line.toUpperCase() : w.line;
-  const lines = wrapText(ctx, text, W * 0.76);
-  const lineHeight = fontPx * 1.2;
-  const startY = H * 0.6 - ((lines.length - 1) * lineHeight) / 2;
-  lines.forEach((ln, i) => ctx.fillText(ln, W / 2, startY + i * lineHeight));
-}
-
 /**
  * Download the given world's wallpaper. A preferred real photo is handed
  * over exactly as uploaded — full quality, no text stamped on it. Only a
- * world with no photo yet falls back to rendering its CSS gradient + line
+ * world with no photo yet falls back to rendering its plain CSS gradient
  * onto a canvas.
  */
 export async function downloadWallpaper(key: WorldKey): Promise<void> {
@@ -266,7 +191,6 @@ export async function downloadWallpaper(key: WorldKey): Promise<void> {
   if (!ctx) return;
 
   paintArt(ctx, w.art);
-  await drawLine(ctx, w);
 
   await new Promise<void>((resolve) => {
     canvas.toBlob((blob) => {

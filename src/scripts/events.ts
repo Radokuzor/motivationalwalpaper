@@ -26,6 +26,8 @@ export const MW = {
   reelWorld: 'mw:reel-world',
   /** Category rail / theme card: open the world's wallpaper grid. */
   categoryOpen: 'mw:category-open',
+  /** Category grid: a specific uploaded photo was tapped — put it on screen. */
+  assetSelect: 'mw:asset-select',
 } as const;
 
 export interface CaptureSubmitDetail {
@@ -46,11 +48,16 @@ export interface QuizCompleteDetail {
 export interface WorldDetail {
   world: WorldKey;
   /** Set only on `reelWorld`, and only when a specific uploaded photo was
-   *  tapped (a category-grid tile backed by a real asset) — the download
-   *  target becomes that exact file, no gradient/text render. Absent (or
-   *  explicitly cleared) means "download world's hero photo, or its
-   *  gradient if it has none yet". */
-  asset?: { id: string; originalUrl: string };
+   *  tapped (a category-grid tile backed by a real asset) — that exact photo
+   *  is shown on the reel panel and becomes the download target, no
+   *  gradient/text render. Absent (or explicitly cleared) means "download
+   *  world's hero photo, or its gradient if it has none yet". */
+  asset?: { id: string; thumbUrl: string; originalUrl: string };
+}
+
+export interface AssetSelectDetail {
+  world: WorldKey;
+  asset: { id: string; thumbUrl: string; originalUrl: string };
 }
 
 interface MwEventMap {
@@ -62,6 +69,7 @@ interface MwEventMap {
   'mw:world-select': WorldDetail;
   'mw:reel-world': WorldDetail;
   'mw:category-open': WorldDetail;
+  'mw:asset-select': AssetSelectDetail;
 }
 
 export function emit<K extends keyof MwEventMap>(

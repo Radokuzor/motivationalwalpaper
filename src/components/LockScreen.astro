@@ -6,34 +6,32 @@
  * The clock reads 9:41 by convention (Apple's product-shot time). The date is
  * fixed to "Monday, September 8" to match the design mockups.
  *
- * Sets --fg / --line / --face from the world so it is self-contained and can be
+ * Sets --fg / --face from the world so it is self-contained and can be
  * reused (theme cards, gallery previews). The wall art + scrims are the parent's
- * job (see Reel.astro).
+ * job (see Reel.astro). Carries no wallpaper text — a real uploaded photo is
+ * shown exactly as uploaded, never stamped with a quote.
  */
 import type { World } from '../data/worlds';
 
 export interface Props {
   world: World;
-  /** override the wallpaper line (defaults to world.line). */
-  line?: string;
   /** show the top-left brand wordmark tag (default true). */
   brandTag?: boolean;
 }
-const { world, line = world.line, brandTag = true } = Astro.props;
+const { world, brandTag = true } = Astro.props;
 const faceVar = `var(--face-${world.key})`;
 ---
 
 <div
   class="lock"
   data-world={world.key}
-  style={`--fg:${world.overlay};--line:${world.lineColor};--face:${faceVar};`}
+  style={`--fg:${world.overlay};--face:${faceVar};`}
 >
   <span class="island" aria-hidden="true"></span>
   {brandTag && <span class="brandtag" aria-hidden="true">motivationalwallpaper</span>}
   <span class="glyph" aria-hidden="true"></span>
   <span class="date">Monday, September 8</span>
   <span class="time">9:41</span>
-  <p class="wp-line">{line}</p>
   <span class="actions" aria-hidden="true">
     <span class="act">
       <svg class="act__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -128,54 +126,6 @@ const faceVar = `var(--face-${world.key})`;
     letter-spacing: -0.02em;
     line-height: 1;
     font-size: clamp(66px, 19vw, 84px);
-  }
-
-  .wp-line {
-    position: absolute;
-    top: 60%;
-    left: 0;
-    right: 0;
-    margin: 0;
-    padding: 0 12%;
-    text-align: center;
-    font-family: var(--face);
-    color: var(--line, var(--fg));
-    font-size: clamp(1.55rem, 7vw, 2.35rem);
-    line-height: 1.2;
-    font-weight: 500;
-    text-wrap: balance;
-    /* opacity + settle animation are owned by Reel (.panel.is-live) */
-  }
-
-  /* world display-face inflections (§08) */
-  [data-world="stoic"] .wp-line {
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  [data-world="soft"] .wp-line {
-    font-weight: 300;
-    letter-spacing: 0.01em;
-  }
-  [data-world="scripture"] .wp-line {
-    font-weight: 600;
-    font-size: clamp(1.95rem, 8.5vw, 2.9rem);
-  }
-  [data-world="builder"] .wp-line {
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  [data-world="aesthetic"] .wp-line {
-    font-weight: 600;
-  }
-  [data-world="rebuild"] .wp-line {
-    font-style: italic;
-    font-weight: 500;
-    font-size: clamp(1.85rem, 8vw, 2.7rem);
-  }
-  [data-world="anime"] .wp-line {
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    font-size: clamp(1.4rem, 6.5vw, 2.15rem);
   }
 
   .actions {
