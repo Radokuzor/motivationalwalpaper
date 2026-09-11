@@ -5,8 +5,11 @@
  *   file       one or more image files (jpeg/png/webp/avif)
  *   world      zero or more world keys this photo belongs to (repeat the
  *              field per category; omit / 'unsorted' to leave it unsorted)
- *   preferred  '1' to mark this upload as the hero photo for each of its
- *              worlds (replaces the CSS gradient there)
+ *   preferred  '1' to deliberately pin this upload as the hero photo for each
+ *              of its worlds, outranking a more recent upload. Optional — the
+ *              most recently uploaded photo for a world is its hero by
+ *              default, so a world only needs one real upload to replace the
+ *              CSS gradient there.
  *   website    honeypot — if filled, we 200 and write nothing
  *
  * Per file: decode + validate with sharp, derive a content hash id, build a
@@ -23,8 +26,10 @@
  * GET /api/wallpapers — public read side, consumed client-side by Screen One
  * so an upload shows up on the live site without a rebuild:
  *   ?world=<key>   sorted assets tagged with that world (preferred first)
- *   ?hero=1        one hero photo per world — the reel/theme grid/category
- *                  grid/PNG export use this to replace a world's CSS gradient
+ *   ?hero=1        one hero photo per world — the theme grid/category rail/
+ *                  category grid use this to replace a world's CSS gradient
+ *   ?feed=1        every real photo site-wide, preferred first then newest —
+ *                  the reel builds its panels from this alone, no gradients
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/firebase';
@@ -137,17 +142,37 @@ async function toPublicAsset(doc: FirebaseFirestore.DocumentSnapshot): Promise<P
   };
 }
 
+// Every sorted asset, preferred ones first then most-recently uploaded — a
+// `preferred` pick always wins (an operator's deliberate choice), otherwise
+// recency stands in. Shared by `?hero=1` (one per world) and `?feed=1` (every
+// real photo site-wide, for the reel). Catalog is operator-managed (small),
+// so no filter/composite index is needed and sorting client-side is cheap.
+async function fetchSortedDocs() {
+  const snap = await db.collection(ASSET_COLLECTION).where('status', '==', 'sorted').limit(500).get();
+  return snap.docs.slice().sort((a, b) => {
+    const av = a.data();
+    const bv = b.data();
+    if (av.preferred !== bv.preferred) return av.preferred ? -1 : 1;
+    const at = av.updatedAt?.toMillis?.() ?? 0;
+    const bt = bv.updatedAt?.toMillis?.() ?? 0;
+    return bt - at;
+  });
+}
+
 export const GET: APIRoute = async ({ url }) => {
+  if (url.searchParams.get('feed') === '1') {
+    // Every real photo site-wide, preferred first then newest — drives the
+    // reel directly (no gradient placeholder panels; a category with no
+    // photo simply contributes none).
+    const docs = await fetchSortedDocs();
+    const items = await Promise.all(docs.map(toPublicAsset));
+    return json({ items });
+  }
+
   if (url.searchParams.get('hero') === '1') {
-    // One query for every preferred asset, then pick the freshest per world in
-    // memory — an equality-only filter needs no composite index, and this
-    // catalog is operator-managed (small), so sorting client-side is cheap.
-    const snap = await db.collection(ASSET_COLLECTION).where('preferred', '==', true).limit(200).get();
-    const docs = snap.docs.slice().sort((a, b) => {
-      const at = a.data().updatedAt?.toMillis?.() ?? 0;
-      const bt = b.data().updatedAt?.toMillis?.() ?? 0;
-      return bt - at;
-    });
+    // A world just needs one real upload to stop showing its CSS-gradient
+    // placeholder — `preferred` is optional, it only pins a specific pick.
+    const docs = await fetchSortedDocs();
 
     const hero: Partial<Record<WorldKey, { id: string; thumbUrl: string; originalUrl: string }>> = {};
     for (const doc of docs) {

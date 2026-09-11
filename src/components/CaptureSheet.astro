@@ -308,7 +308,7 @@ import Quiz from './Quiz.astro';
 
 <script>
   import { MW, emit, on } from '../scripts/events';
-  import { downloadWallpaper, downloadOriginal } from '../scripts/wallpaper';
+  import { downloadOriginal } from '../scripts/wallpaper';
   import type { WorldKey } from '../data/worlds';
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -342,9 +342,8 @@ import Quiz from './Quiz.astro';
     let mode: 'phone' | 'email' = 'phone'; // option 1 by default
     let lastFocused: HTMLElement | null = null;
     // the wallpaper currently centred in the reel — the Download target.
-    // `currentAsset` is set only when a category-grid tile for a specific
-    // real photo was tapped; any other announcement (the reel itself, a
-    // gradient-placeholder tile) explicitly clears it.
+    // Every reel/category-grid tile is a real photo now, so this is set on
+    // every `mw:reel-world` announcement.
     let currentWorld: WorldKey = 'stoic';
     let currentAsset: { id: string; originalUrl: string } | null = null;
     on(MW.reelWorld, (d) => {
@@ -459,11 +458,11 @@ import Quiz from './Quiz.astro';
       active.removeAttribute('aria-invalid');
 
       // hand over the wallpaper they're looking at — non-blocking, and the flow
-      // proceeds whether or not the download starts
+      // proceeds whether or not the download starts. Every wallpaper on the
+      // site is a real photo now, so `currentAsset` should always be set;
+      // this is just a defensive no-op if it somehow isn't.
       if (currentAsset) {
         void downloadOriginal(currentAsset.originalUrl, `motivationalwallpaper-${currentWorld}`);
-      } else {
-        void downloadWallpaper(currentWorld);
       }
 
       viewCapture.hidden = true;

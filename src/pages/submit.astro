@@ -4,9 +4,12 @@
  * any number of categories (the same photo can serve several). Uploads go to
  * POST /api/wallpapers (one file per request, large images downscaled
  * client-side); the grid re-files via PATCH and removes via DELETE on
- * /api/wallpapers/:id. A "Preferred" wallpaper becomes that category's real
- * hero photo on the live site (reel, theme grid, category grid, PNG export),
- * replacing the CSS gradient placeholder — see GET /api/wallpapers?hero=1.
+ * /api/wallpapers/:id. Filing a photo under a category is enough to become
+ * that category's real hero photo on the live site (reel, theme grid,
+ * category grid, PNG export), replacing the CSS gradient placeholder — the
+ * most recent upload wins. "Preferred" is optional: it pins a specific photo
+ * as the hero even if a newer one is uploaded later — see
+ * GET /api/wallpapers?hero=1.
  *
  * noindex + robots Disallow. No auth by request — keep the URL private.
  */
@@ -74,9 +77,10 @@ const kb = (n: number) => `${Math.round(n / 1024)} KB`;
       <h1>Submit wallpapers</h1>
       <p class="sub">
         Pick one or more categories, drop images in — the same photo can
-        belong to several. Mark it Preferred to make it that category's real
-        wallpaper on the live site. Change categories or delete right from
-        the grid.
+        belong to several, and it goes live on the site right away as that
+        category's real wallpaper. Mark it Preferred only if you want to pin
+        it over whatever you upload next. Change categories or delete right
+        from the grid.
       </p>
     </header>
 

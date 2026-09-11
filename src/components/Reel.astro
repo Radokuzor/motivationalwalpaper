@@ -1,38 +1,49 @@
 ---
 /**
  * Reel — the TikTok-style vertical snap-scroll of full-bleed lock screens
- * (brand bible §07). Six panels, then a seamless loop.
+ * (brand bible §07).
+ *
+ * Built entirely from real uploaded photos (`GET /api/wallpapers?feed=1`) —
+ * no CSS-gradient placeholder panels. Preferred photos lead, then every
+ * other real photo site-wide by upload recency. A category with no upload
+ * yet simply contributes no panels; if nothing has been uploaded anywhere,
+ * the reel shows a plain empty state instead of fake wallpaper art.
  *
  * `.reel-frame` is a fixed viewport box; `.reel` scrolls inside it. The reel
- * chrome (chevron, mono index, glass CTA, desktop scroll-dots, desktop
- * cross-fade preview) is absolutely positioned in the frame so it never scrolls.
+ * chrome (chevron, glass CTA, desktop scroll-dots, desktop cross-fade
+ * preview) is absolutely positioned in the frame so it never scrolls.
+ * `#reel-panel-template` holds one static lock-screen shell (chrome only, no
+ * art) that the client script clones per photo.
  *
  * Talks to the rest of Screen One only through CustomEvents (src/scripts/events):
  *  - emits  mw:open-capture   (CTA click, or tapping the wallpaper)
+ *  - emits  mw:reel-world     (the photo now on screen — the download target)
+ *  - listens mw:asset-select  (a category-grid tile was tapped)
  *  - listens mw:world-hover / mw:world-hover-end / mw:world-select  (ThemeGrid)
  */
-import { REEL_WORLDS } from '../data/worlds';
+import { WORLDS } from '../data/worlds';
 import LockScreen from './LockScreen.astro';
+
+// structural chrome only (clock, dynamic island, share/preview icons, home
+// indicator) — identical for every panel now that wallpapers carry no text,
+// so any world works as the template; white chrome reads on any real photo
+// thanks to the .wall scrim below.
+const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
 ---
 
 <div class="reel-frame">
   <div class="reel" id="reel" aria-label="Wallpaper reel">
-    {
-      REEL_WORLDS.map((w) => (
-        <article
-          class="panel"
-          data-world={w.key}
-          style={`--art:${w.art};--scrim:${w.scrim};--label-shadow:${w.labelShadow};`}
-        >
-          <div class="wall" />
-          <LockScreen world={w} />
-        </article>
-      ))
-    }
+    <p class="reel-empty" id="reel-empty" hidden>No wallpapers yet — check back soon.</p>
   </div>
 
+  <template id="reel-panel-template">
+    <article class="panel">
+      <div class="wall"></div>
+      <LockScreen world={TEMPLATE_WORLD} />
+    </article>
+  </template>
+
   <div class="chevron" aria-hidden="true"><b>Swipe down</b><i></i><i></i><i></i></div>
-  <p class="reel-index" aria-hidden="true">01 / &#8734;</p>
   <button class="cta" id="reel-cta" type="button">Download</button>
   <div class="reel-dots" id="reel-dots" role="presentation"></div>
   <div class="reel-preview" id="reel-preview" aria-hidden="true">
@@ -62,6 +73,20 @@ import LockScreen from './LockScreen.astro';
     display: none;
   }
 
+  .reel-empty {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding: 0 15%;
+    text-align: center;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-family: var(--font-sans);
+    font-size: 15px;
+  }
+
   .panel {
     position: relative;
     height: 100dvh;
@@ -75,7 +100,8 @@ import LockScreen from './LockScreen.astro';
     inset: 0;
     background: var(--art);
   }
-  /* 0–35% vertical scrim top AND bottom so the iOS overlay always reads (§09) */
+  /* 0–35% vertical scrim top AND bottom so the iOS overlay always reads (§09)
+     — a fixed dark scrim works for any real photo, no per-world tuning. */
   .wall::before,
   .wall::after {
     content: "";
@@ -87,11 +113,11 @@ import LockScreen from './LockScreen.astro';
   }
   .wall::before {
     top: 0;
-    background: linear-gradient(180deg, var(--scrim), transparent);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent);
   }
   .wall::after {
     bottom: 0;
-    background: linear-gradient(0deg, var(--scrim), transparent);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.45), transparent);
   }
 
   /* ---- reel chrome ---- */
@@ -119,6 +145,9 @@ import LockScreen from './LockScreen.astro';
   .cta:focus-visible {
     outline-color: #fff;
   }
+  .cta[hidden] {
+    display: none;
+  }
 
   .bottom-scrim {
     position: absolute;
@@ -131,19 +160,6 @@ import LockScreen from './LockScreen.astro';
     background: linear-gradient(0deg, rgba(0, 0, 0, 0.42), transparent);
   }
 
-  .reel-index {
-    position: absolute;
-    right: 16px;
-    bottom: 27px;
-    z-index: 40;
-    margin: 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    color: #fff;
-    opacity: 0.72;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  }
 
   .chevron {
     position: absolute;
@@ -216,8 +232,7 @@ import LockScreen from './LockScreen.astro';
     /* CTA stays horizontally centred on the phone (base rule: left:50% + translateX) */
     /* .chevron stays visible on desktop too — it sits centred in the left reel half
        (position:absolute in .reel-frame, which is 50% wide here) */
-    .bottom-scrim,
-    .reel-index {
+    .bottom-scrim {
       display: none;
     }
 
@@ -291,202 +306,199 @@ import LockScreen from './LockScreen.astro';
 </style>
 
 <script>
-  import { WORLDS, REEL_WORLDS, REEL_ORDER } from '../data/worlds';
+  import { WORLDS } from '../data/worlds';
   import type { WorldKey } from '../data/worlds';
   import { MW, emit, on } from '../scripts/events';
-  import { getHeroMap } from '../scripts/hero';
+
+  interface FeedAsset {
+    id: string;
+    thumbUrl: string;
+    originalUrl: string;
+    worlds: WorldKey[];
+  }
 
   function init() {
     const reel = document.getElementById('reel');
     if (!reel) return;
-    const frame = reel.closest('.reel-frame') as HTMLElement;
     const dotsWrap = document.getElementById('reel-dots') as HTMLElement;
-    const reelIndex = frame.querySelector('.reel-index') as HTMLElement | null;
     const preview = document.getElementById('reel-preview') as HTMLElement;
-    const cta = document.getElementById('reel-cta') as HTMLElement;
+    const cta = document.getElementById('reel-cta') as HTMLButtonElement;
+    const emptyMsg = document.getElementById('reel-empty') as HTMLElement;
+    const template = document.getElementById('reel-panel-template') as HTMLTemplateElement;
     const prefersReduced = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
 
-    // real panels, captured before the loop clones are inserted
-    const realPanels = Array.from(reel.querySelectorAll<HTMLElement>('.panel'));
-    const firstReal = realPanels[0];
-    const lastReal = realPanels[realPanels.length - 1];
-
-    // seamless loop: head clone of the last panel, tail clone of the first.
-    // When the scroll settles on a clone we jump one loop — identical pixels.
-    const leadingClone = lastReal.cloneNode(true) as HTMLElement;
-    const trailingClone = firstReal.cloneNode(true) as HTMLElement;
-    leadingClone.classList.add('clone');
-    trailingClone.classList.add('clone');
-    leadingClone.removeAttribute('id');
-    trailingClone.removeAttribute('id');
-    reel.insertBefore(leadingClone, firstReal);
-    reel.appendChild(trailingClone);
-    reel.scrollTop = firstReal.offsetTop;
-
-    // real photo, when a category has one preferred — replaces the CSS
-    // gradient on every panel for that world, clones included (a real photo
-    // is used as-is, no text stamped on it). Progressive: resolves to `{}`
-    // on any failure and every panel keeps its gradient.
-    getHeroMap().then((hero) => {
-      for (const [key, asset] of Object.entries(hero)) {
-        if (!asset) continue;
-        setPanelArt(key as WorldKey, asset.thumbUrl);
-      }
-    });
-
-    function setPanelArt(key: WorldKey, thumbUrl: string) {
-      reel!.querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`).forEach((p) => {
-        p.style.setProperty('--art', `url("${thumbUrl}") center/cover no-repeat`);
-      });
-    }
-
-    const loopDistance = () => trailingClone.offsetTop - firstReal.offsetTop;
-    function onSettle() {
-      const st = reel!.scrollTop;
-      const loop = loopDistance();
-      if (st < firstReal.offsetTop - 4) reel!.scrollTop = st + loop;
-      else if (st > trailingClone.offsetTop - 4) reel!.scrollTop = st - loop;
-    }
-
-    let settleTimer: ReturnType<typeof setTimeout> | undefined;
-    reel.addEventListener(
-      'scroll',
-      () => {
-        clearTimeout(settleTimer);
-        settleTimer = setTimeout(onSettle, 140);
-      },
-      { passive: true },
-    );
-    if ('onscrollend' in window) reel.addEventListener('scrollend', onSettle);
-
-    const dots = REEL_ORDER.map((key, i) => {
-      const w = REEL_WORLDS[i];
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'dot';
-      b.setAttribute('aria-label', `Go to ${w.name}`);
-      b.addEventListener('click', () => scrollToWorld(key));
-      dotsWrap.appendChild(b);
-      return b;
-    });
-
-    let activeWorld: WorldKey | null = null;
-    // set only when a category-grid tile for a specific photo was tapped —
-    // cleared on a natural scroll to a different world's panel.
-    let activeAsset: { id: string; thumbUrl: string; originalUrl: string } | null = null;
-    function setActive(key: WorldKey) {
-      const idx = REEL_ORDER.indexOf(key);
-      if (idx < 0) return;
-      const n = String(idx + 1).padStart(2, '0');
-      if (reelIndex) reelIndex.textContent = `${n} / ∞`;
-      dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
-      // tell the capture sheet which wallpaper is on screen (download target)
-      if (key !== activeWorld) {
-        activeWorld = key;
-        activeAsset = null;
-        emit(MW.reelWorld, { world: key });
-      }
-    }
-
-    // a category-grid tile for a specific photo was tapped — put that exact
-    // photo on screen (not just the world's hero) so what's behind the
-    // capture sheet, and what gets downloaded, are the same file.
-    on(MW.assetSelect, (d) => {
-      activeWorld = d.world;
-      activeAsset = d.asset;
-      setPanelArt(d.world, d.asset.thumbUrl);
-      scrollToWorld(d.world);
-      emit(MW.reelWorld, { world: d.world, asset: d.asset });
-    });
-
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting && e.intersectionRatio >= 0.55) {
-              const key = (e.target as HTMLElement).dataset.world as
-                | WorldKey
-                | undefined;
-              if (key) setActive(key);
-            }
-          }
-        },
-        { root: reel, threshold: [0, 0.55, 0.9] },
-      );
-      reel.querySelectorAll('.panel').forEach((p) => io.observe(p));
-    } else {
-      setActive('stoic');
-    }
-
-    function scrollToWorld(key: WorldKey) {
-      const target = realPanels.find((p) => p.dataset.world === key);
-      if (!target) return;
-      reel!.scrollTo({
-        top: target.offsetTop,
-        behavior: prefersReduced ? 'auto' : 'smooth',
-      });
-    }
-
-    let rz: ReturnType<typeof setTimeout> | undefined;
-    window.addEventListener('resize', () => {
-      clearTimeout(rz);
-      rz = setTimeout(() => {
-        const activeIdx = dots.findIndex((d) => d.classList.contains('is-active'));
-        if (activeIdx < 0) return;
-        const target = realPanels.find(
-          (p) => p.dataset.world === REEL_ORDER[activeIdx],
-        );
-        if (target) reel!.scrollTop = target.offsetTop;
-      }, 180);
-    });
-
-    // desktop cross-fade preview, driven by ThemeGrid — mirrors a reel panel:
-    // real photo when the world has one, its plain gradient otherwise (no text)
-    on(MW.worldHover, (detail) => {
-      const w = WORLDS.find((x) => x.key === detail.world);
-      if (!w) return;
-      preview.dataset.world = w.key;
-      preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};`;
-      getHeroMap().then((hero) => {
-        const asset = hero[w.key];
-        if (!asset || preview.dataset.world !== w.key) return;
-        preview.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
-      });
-      preview.classList.add('is-shown');
-    });
-    on(MW.worldHoverEnd, () => preview.classList.remove('is-shown'));
-    on(MW.worldSelect, (detail) => {
-      preview.classList.remove('is-shown');
-      scrollToWorld(detail.world);
-    });
-
-    // open the capture sheet — re-announce the on-screen wallpaper first so the
-    // sheet's Download hands over exactly what they were looking at
-    const openCapture = () => {
-      if (activeWorld) {
-        emit(MW.reelWorld, { world: activeWorld, asset: activeAsset ?? undefined });
-      }
-      emit(MW.openCapture);
-    };
-    cta.addEventListener('click', openCapture);
-    reel.addEventListener('click', openCapture);
-
-    // auto-advance one panel every 5s until the visitor drives the reel
-    // themselves — the existing loop/settle logic above keeps it seamless
-    // past the last panel, same as a real swipe would.
+    let assets: FeedAsset[] = [];
+    let panels: HTMLElement[] = [];
+    let firstReal: HTMLElement | null = null;
+    let trailingClone: HTMLElement | null = null;
+    let dots: HTMLButtonElement[] = [];
+    let activeIndex = -1;
+    let activeAsset: FeedAsset | null = null;
+    // whichever panel element is actually on screen right now — kept so a
+    // tapped photo whose world isn't in the feed yet (a race with
+    // CategoryGrid's own fetch) still has somewhere to render.
+    let currentPanel: HTMLElement | null = null;
     let autoTimer: ReturnType<typeof setInterval> | undefined;
+
+    function panelFor(asset: FeedAsset): HTMLElement {
+      const frag = template.content.cloneNode(true) as DocumentFragment;
+      const panel = frag.querySelector('.panel') as HTMLElement;
+      panel.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+      return panel;
+    }
+
+    function announce(index: number) {
+      if (index < 0 || index >= assets.length || index === activeIndex) return;
+      activeIndex = index;
+      activeAsset = assets[index];
+      dots.forEach((d, i) => d.classList.toggle('is-active', i === index));
+      emit(MW.reelWorld, {
+        world: activeAsset.worlds[0],
+        asset: { id: activeAsset.id, thumbUrl: activeAsset.thumbUrl, originalUrl: activeAsset.originalUrl },
+      });
+    }
+
+    function scrollToAsset(predicate: (a: FeedAsset) => boolean) {
+      const idx = assets.findIndex(predicate);
+      if (idx < 0) return false;
+      reel!.scrollTo({ top: panels[idx].offsetTop, behavior: prefersReduced ? 'auto' : 'smooth' });
+      return true;
+    }
+
     function stopAuto() {
       if (autoTimer == null) return;
       clearInterval(autoTimer);
       autoTimer = undefined;
     }
-    if (!prefersReduced) {
-      autoTimer = setInterval(() => {
-        reel!.scrollBy({ top: reel!.clientHeight, behavior: 'smooth' });
-      }, 5000);
+
+    function build(items: FeedAsset[]) {
+      assets = items;
+      reel!.querySelectorAll('.panel').forEach((p) => p.remove());
+      dotsWrap.textContent = '';
+      dots = [];
+      activeIndex = -1;
+      activeAsset = null;
+
+      if (!items.length) {
+        emptyMsg.hidden = false;
+        cta.hidden = true;
+        currentPanel = null;
+        return;
+      }
+      emptyMsg.hidden = true;
+      cta.hidden = false;
+
+      panels = items.map(panelFor);
+      panels.forEach((p) => reel!.appendChild(p));
+      firstReal = panels[0];
+      const lastReal = panels[panels.length - 1];
+      currentPanel = firstReal;
+
+      // seamless loop: head clone of the last panel, tail clone of the
+      // first — worth it only past one panel. When the scroll settles on a
+      // clone we jump one loop; identical pixels either way.
+      let leadingClone: HTMLElement | null = null;
+      if (panels.length > 1) {
+        leadingClone = lastReal.cloneNode(true) as HTMLElement;
+        trailingClone = firstReal.cloneNode(true) as HTMLElement;
+        leadingClone.classList.add('clone');
+        trailingClone.classList.add('clone');
+        reel!.insertBefore(leadingClone, firstReal);
+        reel!.appendChild(trailingClone);
+      }
+      reel!.scrollTop = firstReal.offsetTop;
+
+      dots = items.map((asset, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dot';
+        b.setAttribute('aria-label', `Go to wallpaper ${i + 1}`);
+        b.addEventListener('click', () => scrollToAsset((a) => a.id === asset.id));
+        dotsWrap.appendChild(b);
+        return b;
+      });
+
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+                currentPanel = e.target as HTMLElement;
+                const idx = panels.indexOf(currentPanel);
+                if (idx >= 0) announce(idx);
+              }
+            }
+          },
+          { root: reel, threshold: [0, 0.55, 0.9] },
+        );
+        panels.forEach((p) => io.observe(p));
+      } else {
+        announce(0);
+      }
+
+      if (leadingClone && trailingClone) {
+        const loopDistance = () => trailingClone!.offsetTop - firstReal!.offsetTop;
+        function onSettle() {
+          const st = reel!.scrollTop;
+          const loop = loopDistance();
+          if (st < firstReal!.offsetTop - 4) reel!.scrollTop = st + loop;
+          else if (st > trailingClone!.offsetTop - 4) reel!.scrollTop = st - loop;
+        }
+        let settleTimer: ReturnType<typeof setTimeout> | undefined;
+        reel!.addEventListener(
+          'scroll',
+          () => {
+            clearTimeout(settleTimer);
+            settleTimer = setTimeout(onSettle, 140);
+          },
+          { passive: true },
+        );
+        if ('onscrollend' in window) reel!.addEventListener('scrollend', onSettle);
+
+        // auto-advance one panel every 5s until the visitor drives the reel
+        // themselves — onSettle above keeps it seamless past the last panel,
+        // same as a real swipe would.
+        if (!prefersReduced) {
+          autoTimer = setInterval(() => {
+            reel!.scrollBy({ top: reel!.clientHeight, behavior: 'smooth' });
+          }, 5000);
+        }
+      }
+
+      let rz: ReturnType<typeof setTimeout> | undefined;
+      window.addEventListener('resize', () => {
+        clearTimeout(rz);
+        rz = setTimeout(() => {
+          if (activeIndex >= 0 && panels[activeIndex]) reel!.scrollTop = panels[activeIndex].offsetTop;
+        }, 180);
+      });
     }
+
+    fetch('/api/wallpapers?feed=1')
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data: { items?: FeedAsset[] }) => build(data.items ?? []))
+      .catch(() => build([]));
+
+    // a category-grid tile for a specific photo was tapped — put that exact
+    // photo on screen (not just whatever the reel already had there) so
+    // what's behind the capture sheet, and what gets downloaded, are the
+    // same file.
+    on(MW.assetSelect, (d) => {
+      const idx = assets.findIndex((a) => a.id === d.asset.id);
+      if (idx >= 0) {
+        announce(idx);
+        reel!.scrollTo({ top: panels[idx].offsetTop, behavior: 'auto' });
+      } else if (currentPanel) {
+        // not (yet) in the reel's own feed — e.g. CategoryGrid's fetch beat
+        // the reel's — show it on whatever panel is currently on screen
+        activeAsset = { ...d.asset, worlds: [d.world] };
+        currentPanel.style.setProperty('--art', `url("${d.asset.thumbUrl}") center/cover no-repeat`);
+        emit(MW.reelWorld, { world: d.world, asset: d.asset });
+      }
+    });
+
     (['touchstart', 'wheel', 'pointerdown'] as const).forEach((type) =>
       reel.addEventListener(type, stopAuto, { once: true, passive: true }),
     );
@@ -494,6 +506,34 @@ import LockScreen from './LockScreen.astro';
     // could otherwise change the download target mid-quiz.
     on(MW.openCapture, stopAuto);
     on(MW.categoryOpen, stopAuto);
+
+    // desktop cross-fade preview, driven by ThemeGrid — a quick colour peek
+    // at the category before entering the reel/grid proper.
+    on(MW.worldHover, (detail) => {
+      const w = WORLDS.find((x) => x.key === detail.world);
+      if (!w) return;
+      preview.dataset.world = w.key;
+      preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};`;
+      preview.classList.add('is-shown');
+    });
+    on(MW.worldHoverEnd, () => preview.classList.remove('is-shown'));
+    on(MW.worldSelect, (detail) => {
+      preview.classList.remove('is-shown');
+      scrollToAsset((a) => a.worlds.includes(detail.world));
+    });
+
+    // open the capture sheet — re-announce the on-screen wallpaper first so
+    // the sheet's Download hands over exactly what they were looking at
+    const openCapture = () => {
+      if (!activeAsset) return; // nothing on screen yet (empty reel)
+      emit(MW.reelWorld, {
+        world: activeAsset.worlds[0],
+        asset: { id: activeAsset.id, thumbUrl: activeAsset.thumbUrl, originalUrl: activeAsset.originalUrl },
+      });
+      emit(MW.openCapture);
+    };
+    cta.addEventListener('click', openCapture);
+    reel.addEventListener('click', openCapture);
   }
 
   init();

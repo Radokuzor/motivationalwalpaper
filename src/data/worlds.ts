@@ -1,16 +1,18 @@
 /**
- * The six worlds — single source of truth.
+ * The worlds (categories) — single source of truth.
  *
- * One chrome, six aesthetic worlds inside it (brand bible §08). A world supplies
- * a palette, a wallpaper line, and the artwork tokens the lock-screen panels and
- * theme cards render from. Worlds NEVER touch the chrome — no world colour on a
- * button, link or nav.
+ * One chrome, several aesthetic worlds/categories inside it (brand bible
+ * §08). A world supplies a palette and the tokens used for category
+ * navigation UI (theme cards, category rail, category grid) — the `art`
+ * gradient is a UI accent color for those, not a stand-in wallpaper. Worlds
+ * NEVER touch the chrome — no world colour on a button, link or nav.
  *
- * The array order is the Screen One reel order (§07): alternating opposite worlds
- * so any visitor sees themselves within two swipes.
+ * The swiping reel (Reel.astro) is no longer built from this list — it's
+ * built entirely from real uploaded photos (`GET /api/wallpapers?feed=1`),
+ * spanning every category with at least one upload.
  *
- * Consumed by: Reel.astro, LockScreen.astro, ThemeGrid.astro, gallery.astro,
- * iphone-wallpapers/[theme].astro, and the reel island script.
+ * Consumed by: LockScreen.astro, ThemeGrid.astro, CategoryRail.astro,
+ * CategoryGrid.astro, gallery.astro, iphone-wallpapers/[theme].astro.
  */
 
 export type WorldKey =
@@ -44,9 +46,6 @@ export interface World {
   slug: string;
   /** Routed preset profile. Omitted for bonus categories the quiz never routes to. */
   profile?: ProfileKey;
-  /** Reel inclusion — set false to keep a world out of the six-panel swipe reel
-   *  and show it only as a browsable category. Defaults to true. */
-  inReel?: boolean;
   /** "<name>, <age> — <feeling>" from §08. */
   persona: string;
   feeling: string;
@@ -202,7 +201,6 @@ export const WORLDS: World[] = [
     key: 'anime',
     name: 'Anime & Sci-Fi',
     slug: 'anime-scifi',
-    inReel: false,
     persona: 'Kai, 20 — escapism',
     feeling: 'escapism',
     line: 'Protagonist energy only.',
@@ -221,22 +219,10 @@ export const WORLDS: World[] = [
   },
 ];
 
-/** The worlds that get a swipeable panel in the lock-screen reel — brand
- *  bible's six, in reel order. Bonus categories (`inReel: false`) are
- *  browsable everywhere else but never enter the reel. */
-export const REEL_WORLDS: World[] = WORLDS.filter((w) => w.inReel !== false);
-
-/** Reel order = REEL_WORLDS order. */
-export const REEL_ORDER: WorldKey[] = REEL_WORLDS.map((w) => w.key);
-
 const BY_KEY: Record<WorldKey, World> = Object.fromEntries(
   WORLDS.map((w) => [w.key, w]),
 ) as Record<WorldKey, World>;
 
 export function worldByKey(key: WorldKey): World {
   return BY_KEY[key];
-}
-
-export function worldIndex(key: WorldKey): number {
-  return REEL_ORDER.indexOf(key);
 }
