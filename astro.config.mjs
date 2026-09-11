@@ -17,6 +17,18 @@ export default defineConfig({
   output: 'static',
   adapter: vercel(),
   trailingSlash: 'never',
+  // On Vercel, the actual request Host arrives via `x-forwarded-host` — Astro
+  // only trusts that header for domains listed here (else it falls back to
+  // "localhost", which can never match a real Origin header). Without this,
+  // every on-demand route's built-in CSRF check (`security.checkOrigin`,
+  // default on) rejects any real multipart/form-data POST — e.g. /submit's
+  // uploads — with "Cross-site POST form submissions are forbidden".
+  security: {
+    allowedDomains: [
+      { hostname: 'motivationalwallpaper.com', protocol: 'https' },
+      { hostname: 'www.motivationalwallpaper.com', protocol: 'https' },
+    ],
+  },
   integrations: [
     sitemap({
       // Exclude every route that still ships `noindex` (skeleton pages) or is
