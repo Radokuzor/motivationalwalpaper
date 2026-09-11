@@ -106,27 +106,27 @@ const faceVar = `var(--face-${world.key})`;
 
   .date {
     position: absolute;
-    top: 82px;
+    top: 86px;
     left: 0;
     right: 0;
     text-align: center;
     font-family: var(--font-system);
-    font-size: clamp(15px, 4vw, 18px);
-    font-weight: 590;
+    font-size: 13px;
+    font-weight: 700;
     opacity: 0.94;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
   }
   .time {
     position: absolute;
-    top: 100px;
+    top: 104px;
     left: 0;
     right: 0;
     text-align: center;
     font-family: var(--font-system);
-    font-weight: 200;
-    letter-spacing: -0.03em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     line-height: 1;
-    font-size: clamp(80px, 22vw, 106px);
+    font-size: clamp(66px, 19vw, 84px);
   }
 
   .actions {
@@ -167,7 +167,7 @@ const faceVar = `var(--face-${world.key})`;
 
   @media (min-width: 900px) {
     .time {
-      font-size: clamp(70px, 12vw, 100px);
+      font-size: clamp(58px, 10vw, 80px);
     }
   }
 </style>

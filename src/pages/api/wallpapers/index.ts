@@ -55,6 +55,20 @@ const json = (data: unknown, status = 200) =>
     headers: { 'content-type': 'application/json' },
   });
 
+// A successful GET read is public, identical for every visitor, and its
+// signed URLs stay valid for 30 minutes — so it's safe to cache at the edge
+// (Vercel honours s-maxage) and in the browser well short of that. This is
+// what makes a category grid/reel open instantly for the next visitor
+// instead of re-querying Firestore and re-signing URLs on every open.
+const jsonCached = (data: unknown) =>
+  new Response(JSON.stringify(data), {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+    },
+  });
+
 interface UploadResult {
   filename: string;
   ok: boolean;
@@ -166,7 +180,7 @@ export const GET: APIRoute = async ({ url }) => {
     // photo simply contributes none).
     const docs = await fetchSortedDocs();
     const items = await Promise.all(docs.map(toPublicAsset));
-    return json({ items });
+    return jsonCached({ items });
   }
 
   if (url.searchParams.get('hero') === '1') {
@@ -188,7 +202,7 @@ export const GET: APIRoute = async ({ url }) => {
       }
       if (Object.keys(hero).length === WORLDS.length) break;
     }
-    return json(hero);
+    return jsonCached(hero);
   }
 
   const world = url.searchParams.get('world');
@@ -201,7 +215,7 @@ export const GET: APIRoute = async ({ url }) => {
       .get();
     const items = await Promise.all(snap.docs.map(toPublicAsset));
     items.sort((a, b) => Number(b.preferred) - Number(a.preferred));
-    return json({ items });
+    return jsonCached({ items });
   }
 
   return json({ error: 'pass ?world=<key> or ?hero=1' }, 400);

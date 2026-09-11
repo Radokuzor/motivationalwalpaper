@@ -3,11 +3,13 @@
  * CategoryGrid — the slide-up wallpaper grid for one world (Instagram-style).
  *
  * Opened by CategoryRail (mobile/tablet) or a ThemeGrid card (desktop). Opens
- * showing the world's real uploaded photos (`GET /api/wallpapers?world=`) —
- * no placeholder/quote tiles. Tapping a tile hands over that *exact* file: it
- * is pushed onto the reel panel behind the capture sheet (so what's on screen
- * is what gets downloaded), then the capture flow opens. A world with no
- * uploaded photos yet just shows an empty grid until one lands.
+ * showing the world's real uploaded photos — no placeholder/quote tiles.
+ * Photo lists are fetched through `scripts/categoryPhotos`, which every
+ * category is quietly prefetched into on init, so opening one is usually
+ * served from cache instead of a fresh round trip. Tapping a tile hands over
+ * that *exact* file: it is pushed onto the reel panel behind the capture
+ * sheet (so what's on screen is what gets downloaded), then the capture flow
+ * opens. A world with no uploaded photos yet just shows an empty grid.
  *
  *  - listens mw:category-open  { world }
  *  - emits   mw:asset-select   { world, asset }  (Reel renders it + re-announces mw:reel-world)
@@ -177,14 +179,10 @@ import SiteHeader from './SiteHeader.astro';
 
 <script>
   import { MW, emit, on } from '../scripts/events';
-  import { worldByKey } from '../data/worlds';
+  import { worldByKey, WORLDS } from '../data/worlds';
   import type { WorldKey } from '../data/worlds';
-
-  interface PublicAsset {
-    id: string;
-    thumbUrl: string;
-    originalUrl: string;
-  }
+  import { getCategoryPhotos, prefetchAllCategories } from '../scripts/categoryPhotos';
+  import type { CategoryPhoto as PublicAsset } from '../scripts/categoryPhotos';
 
   function init() {
     const view = document.getElementById('mw-grid');
@@ -253,22 +251,17 @@ import SiteHeader from './SiteHeader.astro';
       document.addEventListener('keydown', onKey);
       setTimeout(() => back!.focus(), 60);
 
-      // real uploaded photos only — bail if the visitor already switched
-      // categories by the time this lands
-      fetch(`/api/wallpapers?world=${key}`)
-        .then((res) => (res.ok ? res.json() : { items: [] }))
-        .then((data: { items?: PublicAsset[] }) => {
-          const items = data.items ?? [];
-          if (view!.dataset.world !== key) return;
-          strip!.textContent = '';
-          items.forEach((item, i) => strip!.appendChild(photoTile(w, key, item, i)));
-          countEl!.textContent = items.length
-            ? `${items.length} wallpaper${items.length === 1 ? '' : 's'}`
-            : 'No wallpapers yet';
-        })
-        .catch(() => {
-          if (view!.dataset.world === key) countEl!.textContent = 'No wallpapers yet';
-        });
+      // real uploaded photos only, served from cache when a background
+      // prefetch already warmed this category up — bail if the visitor
+      // already switched categories by the time this lands
+      getCategoryPhotos(key).then((items) => {
+        if (view!.dataset.world !== key) return;
+        strip!.textContent = '';
+        items.forEach((item, i) => strip!.appendChild(photoTile(w, key, item, i)));
+        countEl!.textContent = items.length
+          ? `${items.length} wallpaper${items.length === 1 ? '' : 's'}`
+          : 'No wallpapers yet';
+      });
     }
 
     function closeGrid() {
@@ -290,6 +283,10 @@ import SiteHeader from './SiteHeader.astro';
 
     back.addEventListener('click', () => closeGrid());
     on(MW.categoryOpen, (d) => openGrid(d.world));
+
+    // warm every category's photo list in the background so tapping one
+    // later opens from cache instead of a fresh network round trip
+    prefetchAllCategories(WORLDS.map((w) => w.key));
   }
 
   init();
