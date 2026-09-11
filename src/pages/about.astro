@@ -1,0 +1,49 @@
+---
+/**
+ * /about — who this is for and why the product exists. Chrome page (SiteHeader
+ * + SiteFooter via ChromeLayout); no wallpaper art, brand bible §01 register.
+ */
+import ChromeLayout from '../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="About — motivationalwallpaper.com"
+  description="A lock screen you look forward to seeing — a small daily nudge toward who you're becoming."
+>
+  <h1>About</h1>
+  <p class="lead">
+    Your phone unlocks dozens of times a day. We think that moment is worth
+    more than a stock photo.
+  </p>
+
+  <p>
+    motivationalwallpaper.com makes lock-screen wallpapers built around a
+    feeling, not just a look — the words on the screen are chosen to meet you
+    where you are, whether that's the gym, building something of your own,
+    healing from something hard, or just being gentle with yourself today.
+  </p>
+  <p>
+    Pick the category that feels like who you're becoming, and we'll get a
+    wallpaper onto your lock screen.
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+</style>

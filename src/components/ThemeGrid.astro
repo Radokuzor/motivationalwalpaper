@@ -5,16 +5,14 @@
  * Hidden below 900px (mobile is the reel alone).
  *
  *  - emits mw:world-hover / mw:world-hover-end  (desktop reel cross-fade)
- *  - emits mw:world-select                      (scroll the reel to that world)
+ *  - emits mw:category-open                     (open that world's wallpaper grid)
  */
 import { WORLDS } from '../data/worlds';
-import Wordmark from './Wordmark.astro';
+import SiteHeader from './SiteHeader.astro';
 ---
 
 <aside class="browse" aria-label="Browse wallpapers by theme">
-  <a href="/" class="browse__home" aria-label="motivationalwallpaper home">
-    <Wordmark size="1rem" dotCom />
-  </a>
+  <SiteHeader />
   <p class="browse__label">Browse by theme</p>
   <div class="theme-grid">
     {
@@ -50,8 +48,11 @@ import Wordmark from './Wordmark.astro';
     }
   }
 
-  .browse__home {
-    text-decoration: none;
+  /* bleed the shared SiteHeader to the pane's edges, then re-pad it to match
+     the aside's own inset so the wordmark/tabs line up with the grid below */
+  .browse :global(.site-header) {
+    margin: -34px -34px 0;
+    padding: 20px 34px 16px;
   }
   .browse__label {
     margin: 22px 0 14px;
@@ -107,6 +108,7 @@ import Wordmark from './Wordmark.astro';
 <script>
   import { MW, emit } from '../scripts/events';
   import type { WorldKey } from '../data/worlds';
+  import { getHeroMap } from '../scripts/hero';
 
   function init() {
     const cards = document.querySelectorAll<HTMLButtonElement>('.theme-card');
@@ -119,7 +121,16 @@ import Wordmark from './Wordmark.astro';
       card.addEventListener('mouseleave', hide);
       card.addEventListener('focus', show);
       card.addEventListener('blur', hide);
-      card.addEventListener('click', () => emit(MW.worldSelect, { world }));
+      card.addEventListener('click', () => emit(MW.categoryOpen, { world }));
+    });
+
+    // real photo, when a category has a preferred one — replaces the gradient
+    getHeroMap().then((hero) => {
+      cards.forEach((card) => {
+        const world = card.dataset.world as WorldKey | undefined;
+        const asset = world ? hero[world] : undefined;
+        if (asset) card.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+      });
     });
   }
 

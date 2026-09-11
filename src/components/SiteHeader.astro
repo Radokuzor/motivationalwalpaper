@@ -1,27 +1,115 @@
 ---
 /**
- * SiteHeader — the quiet chrome header for content pages (not Screen One).
- * Wordmark only; the interface whispers.
+ * SiteHeader — the quiet chrome header: Home/About tabs + a category
+ * quick-nav built from the six worlds + bonus categories.
+ *
+ * Used two ways:
+ *  - ChromeLayout mounts it on every non-Screen-One page (gallery, quiz,
+ *    /about, SEO landing pages) — category links there navigate to /gallery.
+ *  - Screen One mounts it directly inside ThemeGrid (desktop, right pane
+ *    only) and CategoryGrid (mobile grid sheet only) — there, clicking a
+ *    category opens that world's grid in place instead of navigating away.
  */
-import Wordmark from './Wordmark.astro';
+import { WORLDS } from '../data/worlds';
 ---
 
 <header class="site-header">
-  <a href="/" class="site-header__home" aria-label="motivationalwallpaper home">
-    <Wordmark size="1.0625rem" dotCom />
-  </a>
+  <nav class="site-header__tabs" aria-label="Site">
+    <a href="/">Home</a>
+    <a href="/blog">Blog</a>
+    <a href="/about">About</a>
+  </nav>
+  <nav class="site-header__cats" aria-label="Categories">
+    {
+      WORLDS.map((w) => (
+        <a href={`/gallery#${w.slug}`} data-world={w.key}>
+          {w.name}
+        </a>
+      ))
+    }
+  </nav>
 </header>
 
 <style>
   .site-header {
-    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    padding: 16px 24px;
     border-bottom: 1px solid var(--hairline);
   }
-  .site-header__home {
-    text-decoration: none;
-    display: inline-block;
+  .site-header__tabs,
+  .site-header__cats {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-  .site-header__home:hover :global(.wordmark) {
+  .site-header__tabs::-webkit-scrollbar,
+  .site-header__cats::-webkit-scrollbar {
+    display: none;
+  }
+  .site-header__cats {
+    flex: 1 1 auto;
+    gap: 0;
+    padding-left: 14px;
+    border-left: 1px solid var(--hairline);
+  }
+
+  .site-header__tabs a,
+  .site-header__cats a {
+    flex: none;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+  }
+  .site-header__cats a {
+    padding: 0 14px;
+  }
+  .site-header__cats a:first-child {
+    padding-left: 0;
+  }
+  .site-header__cats a:not(:first-child) {
+    border-left: 1px solid var(--hairline);
+  }
+  .site-header__tabs a:hover,
+  .site-header__cats a:hover {
     color: var(--ink);
   }
+
+  @media (max-width: 520px) {
+    .site-header {
+      padding: 14px 18px;
+    }
+    .site-header__cats {
+      border-left: 0;
+      padding-left: 0;
+      flex-basis: 100%;
+    }
+  }
 </style>
+
+<script>
+  // On Screen One, hijack category taps to open the in-page grid instead of
+  // navigating to /gallery — the modal (#mw-grid) only exists there.
+  import { MW, emit } from '../scripts/events';
+  import type { WorldKey } from '../data/worlds';
+
+  function init() {
+    if (!document.getElementById('mw-grid')) return;
+    document.querySelectorAll<HTMLAnchorElement>('.site-header__cats a').forEach((a) => {
+      const world = a.dataset.world as WorldKey | undefined;
+      if (!world) return;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        emit(MW.categoryOpen, { world });
+      });
+    });
+  }
+
+  init();
+</script>

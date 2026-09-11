@@ -1,0 +1,322 @@
+---
+/**
+ * CategoryGrid — the slide-up wallpaper grid for one world (Instagram-style).
+ *
+ * Opened by CategoryRail (mobile/tablet) or a ThemeGrid card (desktop). A
+ * full-screen sheet rises over Screen One with a 3-up grid of every wallpaper
+ * line in that world; tapping a tile hands that wallpaper to the capture sheet.
+ *
+ *  - listens mw:category-open  { world }
+ *  - emits   mw:reel-world     { world }   (set the download target)
+ *  - emits   mw:open-capture               (start the capture flow)
+ *
+ * Chrome (header, ground) themes light/dark from §04 tokens; the tiles are
+ * artwork and stay fixed-colour.
+ */
+import SiteHeader from './SiteHeader.astro';
+---
+
+<section
+  class="grid-view"
+  id="mw-grid"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="mw-grid-title"
+  hidden
+>
+  <div class="grid-nav">
+    <SiteHeader />
+  </div>
+  <header class="grid-head">
+    <button class="grid-back" id="mw-grid-back" type="button" aria-label="Close category">
+    </button>
+    <h2 class="grid-title" id="mw-grid-title">
+      <span class="grid-name" id="mw-grid-name"></span>
+      <span class="grid-count" id="mw-grid-count"></span>
+    </h2>
+  </header>
+  <div class="grid-scroll">
+    <div class="grid-strip" id="mw-grid-strip"></div>
+  </div>
+</section>
+
+<style>
+  .grid-view {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: var(--surface);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .grid-view.show {
+    transform: translateY(0);
+  }
+
+  /* the shared header lives here on mobile only — desktop already shows it
+     above ThemeGrid's "Browse by theme" pane */
+  .grid-nav {
+    flex: none;
+  }
+  @media (min-width: 900px) {
+    .grid-nav {
+      display: none;
+    }
+  }
+
+  .grid-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface);
+  }
+  .grid-back {
+    width: 36px;
+    height: 36px;
+    margin-left: -8px;
+    flex: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .grid-back::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    margin-left: 4px;
+  }
+  .grid-back:hover {
+    background: var(--surface-2);
+  }
+  .grid-back:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .grid-title {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    font-family: var(--face, inherit);
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .grid-view[data-world="stoic"] .grid-title {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .grid-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+  }
+
+  .grid-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grid-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    padding: 3px;
+  }
+
+  /* tiles are built in the client script — opt them out of scoped hashing */
+  .grid-strip :global(.grid-tile) {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    background: var(--art);
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .grid-strip :global(.grid-tile)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      var(--scrim),
+      transparent 40%,
+      transparent 60%,
+      var(--scrim)
+    );
+    opacity: 0.55;
+  }
+  .grid-strip :global(.grid-tile span) {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    padding: 12px 9px;
+    font-family: var(--face);
+    color: var(--line, var(--fg));
+    font-size: 11px;
+    line-height: 1.32;
+    font-weight: 500;
+    text-align: center;
+    text-wrap: balance;
+    text-shadow: var(--label-shadow);
+  }
+  .grid-view[data-world="stoic"] .grid-strip :global(.grid-tile span) {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .grid-view[data-world="builder"] .grid-strip :global(.grid-tile span) {
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .grid-view[data-world="scripture"] .grid-strip :global(.grid-tile span) {
+    font-weight: 600;
+  }
+  .grid-view[data-world="rebuild"] .grid-strip :global(.grid-tile span) {
+    font-style: italic;
+  }
+  .grid-strip :global(.grid-tile:focus-visible) {
+    outline: 2px solid #fff;
+    outline-offset: -3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grid-view,
+    .grid-view.show {
+      transition: opacity 120ms ease !important;
+      transform: none !important;
+    }
+    .grid-view {
+      opacity: 0;
+    }
+    .grid-view.show {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  import { MW, emit, on } from '../scripts/events';
+  import { worldByKey } from '../data/worlds';
+  import type { WorldKey } from '../data/worlds';
+  import { getHeroMap } from '../scripts/hero';
+
+  function init() {
+    const view = document.getElementById('mw-grid');
+    const strip = document.getElementById('mw-grid-strip');
+    const nameEl = document.getElementById('mw-grid-name');
+    const countEl = document.getElementById('mw-grid-count');
+    const back = document.getElementById('mw-grid-back');
+    if (!view || !strip || !nameEl || !countEl || !back) return;
+
+    let returnFocus: HTMLElement | null = null;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        closeGrid();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const list = Array.from(
+        view!.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]'),
+      ).filter((el) => el.offsetParent !== null);
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    function openGrid(key: WorldKey) {
+      const w = worldByKey(key);
+      if (!w) return;
+
+      strip!.textContent = '';
+      w.gridLines.forEach((text) => {
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = 'grid-tile';
+        tile.setAttribute('aria-label', `${w.name} wallpaper — “${text}”`);
+        const span = document.createElement('span');
+        span.textContent = text;
+        tile.appendChild(span);
+        tile.addEventListener('click', () => {
+          // hand the wallpaper they tapped to the capture flow
+          emit(MW.reelWorld, { world: key });
+          emit(MW.openCapture);
+          returnFocus = null; // the capture sheet manages focus now
+          closeGrid();
+        });
+        strip!.appendChild(tile);
+      });
+
+      nameEl!.textContent = w.name;
+      countEl!.textContent = `${w.gridLines.length} wallpapers`;
+      view!.dataset.world = key;
+      view!.style.cssText = `--art:${w.art};--scrim:${w.scrim};--fg:${w.overlay};--line:${w.lineColor};--face:var(--face-${key});`;
+      // real photo, when this category has a preferred one — cascades to
+      // every tile below (they inherit --art, none set their own)
+      getHeroMap().then((hero) => {
+        const asset = hero[key];
+        if (asset && view!.dataset.world === key) {
+          view!.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+        }
+      });
+      view!.hidden = false;
+      returnFocus = document.activeElement as HTMLElement | null;
+      document.body.classList.add('mw-grid-open');
+      requestAnimationFrame(() => view!.classList.add('show'));
+      document.addEventListener('keydown', onKey);
+      setTimeout(() => back!.focus(), 60);
+    }
+
+    function closeGrid() {
+      if (view!.hidden) return;
+      view!.classList.remove('show');
+      document.removeEventListener('keydown', onKey);
+      document.body.classList.remove('mw-grid-open');
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        view!.hidden = true;
+        view!.removeEventListener('transitionend', finish);
+        returnFocus?.focus();
+      };
+      view!.addEventListener('transitionend', finish);
+      setTimeout(finish, 420);
+    }
+
+    back.addEventListener('click', () => closeGrid());
+    on(MW.categoryOpen, (d) => openGrid(d.world));
+  }
+
+  init();
+</script>

@@ -35,6 +35,7 @@
   --face-builder: "Archivo", system-ui, sans-serif;
   --face-aesthetic: "Quicksand", system-ui, sans-serif;
   --face-rebuild: "Lora", Georgia, serif;
+  --face-anime: "Orbitron", system-ui, sans-serif;
 
   /* ---- §05 type scale (role: size / weight / tracking / leading) ---- */
   --t-display-size: clamp(1.875rem, 1.2rem + 3vw, 2.875rem); /* 30 mobile -> 46 */

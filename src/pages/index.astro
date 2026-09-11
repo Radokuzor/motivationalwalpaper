@@ -10,14 +10,41 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Reel from '../components/Reel.astro';
 import ThemeGrid from '../components/ThemeGrid.astro';
+import CategoryRail from '../components/CategoryRail.astro';
+import CategoryGrid from '../components/CategoryGrid.astro';
 import CaptureSheet from '../components/CaptureSheet.astro';
 
 const title = 'motivationalwallpaper — a lock screen you look forward to seeing';
 const description =
   'A daily identity anchor for your phone. Pick a look that feels like who you are becoming, and we send it to your lock screen.';
+
+// Sitewide entity graph — helps Google/Gemini/other AI crawlers resolve the
+// brand as a single entity (01_strategy_brief.md "Gemini optimization").
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://motivationalwallpaper.com/#organization',
+      name: 'motivationalwallpaper.com',
+      url: 'https://motivationalwallpaper.com/',
+      logo: 'https://motivationalwallpaper.com/favicon.svg',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://motivationalwallpaper.com/#website',
+      url: 'https://motivationalwallpaper.com/',
+      name: 'motivationalwallpaper.com',
+      description,
+      publisher: { '@id': 'https://motivationalwallpaper.com/#organization' },
+    },
+  ],
+};
 ---
 
 <BaseLayout title={title} description={description} bodyClass="screen-one">
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
   <h1 class="sr-only">
     motivationalwallpaper — a lock screen you look forward to seeing. Join the
     community.
@@ -26,6 +53,8 @@ const description =
   <div class="app">
     <Reel />
     <ThemeGrid />
+    <CategoryRail />
+    <CategoryGrid />
     <CaptureSheet />
   </div>
 </BaseLayout>

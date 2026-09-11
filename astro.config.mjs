@@ -19,10 +19,16 @@ export default defineConfig({
   trailingSlash: 'never',
   integrations: [
     sitemap({
-      // Every route currently ships `noindex` except `/`, so the sitemap lists
-      // only the homepage. As pages earn real content and drop `noindex`, add
-      // them here (the `/iphone-wallpapers/*` set first).
-      filter: (page) => page === `${SITE}/`,
+      // Exclude every route that still ships `noindex` (skeleton pages) or is
+      // otherwise not meant to be crawled. Real content (`/`, `/about`,
+      // `/blog`, `/blog/*`) is indexable and listed. As a skeleton page earns
+      // real content and drops `noindex`, drop its prefix here too.
+      filter: (page) => {
+        const path = page.replace(SITE, '') || '/';
+        const NOINDEX_PREFIXES = ['/home', '/gallery', '/quiz', '/submit', '/iphone-wallpapers', '/api'];
+        if (path === '/404') return false;
+        return !NOINDEX_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+      },
     }),
   ],
   build: {

@@ -11,14 +11,14 @@
  *  - emits  mw:open-capture   (CTA click, or tapping the wallpaper)
  *  - listens mw:world-hover / mw:world-hover-end / mw:world-select  (ThemeGrid)
  */
-import { WORLDS } from '../data/worlds';
+import { REEL_WORLDS } from '../data/worlds';
 import LockScreen from './LockScreen.astro';
 ---
 
 <div class="reel-frame">
   <div class="reel" id="reel" aria-label="Wallpaper reel">
     {
-      WORLDS.map((w) => (
+      REEL_WORLDS.map((w) => (
         <article
           class="panel"
           data-world={w.key}
@@ -345,9 +345,10 @@ import LockScreen from './LockScreen.astro';
 </style>
 
 <script>
-  import { WORLDS, REEL_ORDER } from '../data/worlds';
+  import { WORLDS, REEL_WORLDS, REEL_ORDER } from '../data/worlds';
   import type { WorldKey } from '../data/worlds';
   import { MW, emit, on } from '../scripts/events';
+  import { getHeroMap } from '../scripts/hero';
 
   function init() {
     const reel = document.getElementById('reel');
@@ -379,6 +380,18 @@ import LockScreen from './LockScreen.astro';
     reel.appendChild(trailingClone);
     reel.scrollTop = firstReal.offsetTop;
 
+    // real photo, when a category has one preferred — replaces the CSS
+    // gradient on every panel for that world, clones included. Progressive:
+    // resolves to `{}` on any failure and every panel keeps its gradient.
+    getHeroMap().then((hero) => {
+      for (const [key, asset] of Object.entries(hero)) {
+        if (!asset) continue;
+        reel!
+          .querySelectorAll<HTMLElement>(`.panel[data-world="${key}"]`)
+          .forEach((p) => p.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`));
+      }
+    });
+
     const loopDistance = () => trailingClone.offsetTop - firstReal.offsetTop;
     function onSettle() {
       const st = reel!.scrollTop;
@@ -399,7 +412,7 @@ import LockScreen from './LockScreen.astro';
     if ('onscrollend' in window) reel.addEventListener('scrollend', onSettle);
 
     const dots = REEL_ORDER.map((key, i) => {
-      const w = WORLDS[i];
+      const w = REEL_WORLDS[i];
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'dot';
@@ -489,6 +502,28 @@ import LockScreen from './LockScreen.astro';
     };
     cta.addEventListener('click', openCapture);
     reel.addEventListener('click', openCapture);
+
+    // auto-advance one panel every 5s until the visitor drives the reel
+    // themselves — the existing loop/settle logic above keeps it seamless
+    // past the last panel, same as a real swipe would.
+    let autoTimer: ReturnType<typeof setInterval> | undefined;
+    function stopAuto() {
+      if (autoTimer == null) return;
+      clearInterval(autoTimer);
+      autoTimer = undefined;
+    }
+    if (!prefersReduced) {
+      autoTimer = setInterval(() => {
+        reel!.scrollBy({ top: reel!.clientHeight, behavior: 'smooth' });
+      }, 5000);
+    }
+    (['touchstart', 'wheel', 'pointerdown'] as const).forEach((type) =>
+      reel.addEventListener(type, stopAuto, { once: true, passive: true }),
+    );
+    // stop once the visitor moves past browsing — a background auto-advance
+    // could otherwise change the download target mid-quiz.
+    on(MW.openCapture, stopAuto);
+    on(MW.categoryOpen, stopAuto);
   }
 
   init();

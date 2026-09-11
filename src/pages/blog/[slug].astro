@@ -1,0 +1,227 @@
+---
+/**
+ * /blog/<slug> — single article. Renders the Markdown body inside the
+ * ChromeLayout chrome, plus Article (+ FAQPage, when the post has `faqs`)
+ * JSON-LD for AI Overviews / citation (01_strategy_brief.md #2, #3).
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { worldByKey, type WorldKey } from '../../data/worlds';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const { title, description, publishDate, updatedDate, category, relatedWorld, faqs } = post.data;
+
+const world = relatedWorld ? worldByKey(relatedWorld as WorldKey) : undefined;
+const canonical = new URL(`/blog/${post.id}`, Astro.site).href;
+
+const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const wordCount = post.body?.split(/\s+/).filter(Boolean).length ?? 0;
+const readingMinutes = Math.max(1, Math.round(wordCount / 200));
+
+const articleJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description,
+  datePublished: publishDate.toISOString(),
+  dateModified: (updatedDate ?? publishDate).toISOString(),
+  author: { '@type': 'Organization', name: 'motivationalwallpaper.com' },
+  publisher: {
+    '@type': 'Organization',
+    name: 'motivationalwallpaper.com',
+    url: 'https://motivationalwallpaper.com',
+  },
+  mainEntityOfPage: canonical,
+};
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://motivationalwallpaper.com/' },
+    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://motivationalwallpaper.com/blog' },
+    { '@type': 'ListItem', position: 3, name: title, item: canonical },
+  ],
+};
+
+const faqJsonLd = faqs?.length
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }
+  : null;
+---
+
+<ChromeLayout title={`${title} — motivationalwallpaper.com`} description={description} canonical={canonical}>
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} />
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)} />
+  {faqJsonLd && (
+    <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqJsonLd)} />
+  )}
+
+  <nav class="crumb" aria-label="Breadcrumb">
+    <a href="/blog">Blog</a><span aria-hidden="true"> / </span><span>{category}</span>
+  </nav>
+
+  <article class="post">
+    <header class="post__head">
+      <span class="post__eyebrow">{category}</span>
+      <h1>{title}</h1>
+      <p class="post__meta">
+        <time datetime={publishDate.toISOString()}>{dateFmt.format(publishDate)}</time>
+        <span aria-hidden="true"> · </span>
+        {readingMinutes} min read
+      </p>
+    </header>
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    <aside class="cta">
+      <p>
+        {world ? (
+          <>
+            Want a daily reminder like this on your lock screen? Browse the
+            <a href={`/gallery#${world.slug}`}> {world.name} wallpapers</a>.
+          </>
+        ) : (
+          <>
+            Want a daily reminder like this on your lock screen? Browse
+            <a href="/gallery"> all wallpaper categories</a>.
+          </>
+        )}
+      </p>
+    </aside>
+  </article>
+
+  <p class="back"><a href="/blog">&larr; Back to the blog</a></p>
+</ChromeLayout>
+
+<style>
+  .crumb {
+    font-size: var(--t-small-size);
+    color: var(--ink-faint);
+    margin: 0 0 24px;
+  }
+  .crumb a {
+    color: var(--ink-faint);
+  }
+  .crumb a:hover {
+    color: var(--ink);
+  }
+
+  .post {
+    max-width: var(--measure);
+    margin: 0 auto;
+  }
+  .post__head {
+    margin-bottom: 2rem;
+  }
+  .post__eyebrow {
+    display: inline-block;
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-track);
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: var(--t-display-size);
+    font-weight: var(--t-display-weight);
+    letter-spacing: var(--t-display-track);
+    line-height: 1.1;
+    margin: 0 0 12px;
+  }
+  .post__meta {
+    color: var(--ink-faint);
+    font-size: var(--t-small-size);
+    margin: 0;
+  }
+
+  .prose {
+    color: var(--ink-soft);
+    line-height: 1.7;
+    font-size: 1.0625rem;
+  }
+  .prose :global(h2) {
+    color: var(--ink);
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 2.2rem 0 0.9rem;
+  }
+  .prose :global(h3) {
+    color: var(--ink);
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 1.8rem 0 0.7rem;
+  }
+  .prose :global(p) {
+    margin: 0 0 1.15rem;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    margin: 0 0 1.15rem;
+    padding-left: 1.3rem;
+  }
+  .prose :global(li) {
+    margin: 0 0 0.5rem;
+  }
+  .prose :global(li > ul),
+  .prose :global(li > ol) {
+    margin-top: 0.5rem;
+  }
+  .prose :global(blockquote) {
+    margin: 0 0 1.15rem;
+    padding: 4px 0 4px 1.1rem;
+    border-left: 2px solid var(--accent-soft);
+    color: var(--ink);
+    font-style: italic;
+  }
+  .prose :global(strong) {
+    color: var(--ink);
+  }
+  .prose :global(a) {
+    text-decoration-line: underline;
+  }
+  .prose :global(hr) {
+    border: none;
+    border-top: 1px solid var(--hairline);
+    margin: 2rem 0;
+  }
+
+  .cta {
+    margin-top: 2.4rem;
+    padding: 18px 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    font-size: var(--t-small-size);
+  }
+  .cta p {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .back {
+    max-width: var(--measure);
+    margin: 2.4rem auto 0;
+  }
+  .back a {
+    font-size: var(--t-small-size);
+    font-weight: 600;
+  }
+</style>

@@ -413,6 +413,98 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 .btn-primary:disabled{opacity:.42;cursor:not-allowed}
 .btn-primary:disabled:hover{background:var(--ink);color:var(--paper)}
 
+/* =============================== category rail ========================== */
+/* floating, right edge, vertically centred — one glass pill per world.
+   Chrome whispers: dark glass like the pinned CTA, flush to the screen edge. */
+.cat-rail{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:40;
+  display:flex;flex-direction:column;gap:6px;align-items:flex-end;
+}
+.cat-btn{
+  appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font:inherit;
+  display:flex;align-items:center;gap:8px;height:32px;padding:0 13px;
+  border-radius:999px 0 0 999px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.26);border-right:0;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  color:#fff;font-size:10.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.4);
+  transition:background .16s ease;
+}
+.cat-btn i{
+  width:12px;height:12px;border-radius:4px;flex:none;
+  background:var(--art);box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);
+}
+.cat-btn:active{background:rgba(0,0,0,.44)}
+.cat-btn.is-current{background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.6)}
+.cat-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* =============================== category grid view ==================== */
+/* tap a category → a full-screen 3-up grid of every wallpaper in that world,
+   the way you'd scan someone's grid of posts. Slides up over the reel. */
+.grid-view{
+  position:fixed;inset:0;z-index:45;
+  background:var(--surface);color:var(--ink);
+  display:flex;flex-direction:column;
+  transform:translateY(100%);
+  transition:transform 340ms cubic-bezier(.32,.72,0,1);
+}
+.grid-view.show{transform:translateY(0)}
+.grid-view[hidden]{display:none}   /* author display:flex would otherwise beat [hidden] */
+.grid-head{
+  flex:none;display:flex;align-items:center;gap:10px;
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
+  border-bottom:1px solid var(--hairline);background:var(--surface);
+}
+.grid-back{
+  appearance:none;-webkit-appearance:none;border:0;background:transparent;cursor:pointer;
+  width:36px;height:36px;margin-left:-8px;flex:none;
+  display:grid;place-items:center;color:var(--ink);border-radius:50%;
+}
+.grid-back::before{
+  content:"";width:10px;height:10px;
+  border-left:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:rotate(45deg);margin-left:4px;
+}
+.grid-back:hover{background:var(--surface-2)}
+.grid-back:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid-title{
+  margin:0;display:flex;align-items:baseline;gap:9px;
+  font-family:var(--face, inherit);
+  font-size:19px;font-weight:600;letter-spacing:-.01em;color:var(--ink);
+}
+.p--stoic .grid-title{text-transform:uppercase;letter-spacing:.04em}
+.grid-count{
+  font-family:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size:11px;font-weight:400;letter-spacing:.02em;color:var(--ink-faint);
+}
+.grid-scroll{
+  flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+.grid-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px}
+.grid-tile{
+  appearance:none;-webkit-appearance:none;border:0;padding:0;cursor:pointer;
+  position:relative;aspect-ratio:1;overflow:hidden;
+  background:var(--art);color:var(--fg);
+}
+.grid-tile::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,var(--scrim),transparent 40%,transparent 60%,var(--scrim));
+  opacity:.55;
+}
+.grid-tile span{
+  position:absolute;inset:0;z-index:1;
+  display:grid;place-items:center;padding:12px 9px;
+  font-family:var(--face);color:var(--line, var(--fg));
+  font-size:11px;line-height:1.32;font-weight:500;
+  text-align:center;text-wrap:balance;text-shadow:var(--label-shadow);
+}
+.p--stoic .grid-tile span{text-transform:uppercase;letter-spacing:.05em}
+.p--builder .grid-tile span{font-weight:800;letter-spacing:-.01em}
+.p--rebuild .grid-tile span{font-style:italic}
+.p--scripture .grid-tile span{font-weight:600}
+.grid-tile:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+
 /* ================================ desktop ≥900px ======================== */
 @media (min-width:900px){
   .app{display:flex;height:100dvh;overflow:hidden}
@@ -511,6 +603,12 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
   body{background:var(--paper)}
   .reel{max-width:560px;margin:0 auto;box-shadow:0 0 80px rgba(0,0,0,.16)}
   .cta{bottom:26px}
+  .cat-rail{right:calc(50% - 280px)}   /* align to the centred reel's edge */
+}
+
+/* category rail is mobile/tablet only — desktop already has the theme grid */
+@media (min-width:900px){
+  .cat-rail{display:none}
 }
 
 /* ================================ motion (§09) ========================= */
@@ -535,6 +633,9 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
   .sheet{opacity:0}
   .sheet.show{opacity:1}
   .reel-preview{transition:opacity 120ms ease}
+  .grid-view,.grid-view.show{transition:opacity 120ms ease !important;transform:none !important}
+  .grid-view{opacity:0}
+  .grid-view.show{opacity:1}
 }
 /* keep the desktop modal centred even with the slide removed */
 @media (prefers-reduced-motion: reduce) and (min-width:900px){
@@ -639,6 +740,16 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 
   </main>
 
+  <!-- mobile / tablet: floating category rail → opens a grid view -->
+  <nav class="cat-rail" aria-label="Wallpaper categories">
+    <button class="cat-btn p--stoic" type="button" data-world="stoic"><i aria-hidden="true"></i>Stoic</button>
+    <button class="cat-btn p--soft" type="button" data-world="soft"><i aria-hidden="true"></i>Soft Life</button>
+    <button class="cat-btn p--scripture" type="button" data-world="scripture"><i aria-hidden="true"></i>Scripture</button>
+    <button class="cat-btn p--builder" type="button" data-world="builder"><i aria-hidden="true"></i>Builder</button>
+    <button class="cat-btn p--aesthetic" type="button" data-world="aesthetic"><i aria-hidden="true"></i>Aesthetic</button>
+    <button class="cat-btn p--rebuild" type="button" data-world="rebuild"><i aria-hidden="true"></i>Rebuild</button>
+  </nav>
+
   <!-- desktop: cross-fade target over the left reel -->
   <div class="reel-preview" aria-hidden="true">
     <div class="preview-wall"></div>
@@ -669,6 +780,17 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
   </aside>
 
 </div>
+
+<!-- ================= category grid view (Instagram-style 3-up) ================= -->
+<section class="grid-view" id="gridView" role="dialog" aria-modal="true" aria-labelledby="gridTitle" hidden>
+  <header class="grid-head">
+    <button class="grid-back" id="gridBack" type="button" aria-label="Close category"></button>
+    <h2 class="grid-title" id="gridTitle"><span id="gridName">Stoic</span><span class="grid-count" id="gridCount"></span></h2>
+  </header>
+  <div class="grid-scroll">
+    <div class="grid-strip" id="gridStrip"></div>
+  </div>
+</section>
 
 <!-- ============================== capture sheet ============================== -->
 <div class="backdrop" id="backdrop" hidden></div>
@@ -740,6 +862,12 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
   var dotsWrap    = document.querySelector('.reel-dots');
   var preview     = document.querySelector('.reel-preview');
   var previewLine = preview.querySelector('.preview-line');
+  var catRail     = document.querySelector('.cat-rail');
+  var gridView    = document.getElementById('gridView');
+  var gridStrip   = document.getElementById('gridStrip');
+  var gridName    = document.getElementById('gridName');
+  var gridCount   = document.getElementById('gridCount');
+  var gridBack    = document.getElementById('gridBack');
 
   var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -754,6 +882,9 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
 
   /* answers captured for the (prototype) profile routing */
   var answers = {};
+
+  /* wallpaper picked from a category grid — prototype capture only */
+  var selectedWallpaper = null;
 
   /* ------------------------------------------------ reel: loop + tracking */
   var realPanels = Array.prototype.slice.call(reel.querySelectorAll('.panel'));
@@ -819,6 +950,11 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
     var n = (idx + 1 < 10 ? '0' : '') + (idx + 1);
     reelIndex.textContent = n + ' / ∞';
     dots.forEach(function(d, i){ d.classList.toggle('is-active', i === idx); });
+    if (catRail){
+      Array.prototype.forEach.call(catRail.querySelectorAll('.cat-btn'), function(b){
+        b.classList.toggle('is-current', b.dataset.world === key);
+      });
+    }
   }
 
   if ('IntersectionObserver' in window){
@@ -872,6 +1008,120 @@ form{display:flex;flex-direction:column;gap:10px;margin:6px 0 0}
     card.addEventListener('blur', hide);
     card.addEventListener('click', function(){ hide(); scrollToWorld(key); });
   });
+
+  /* ------------------------------------------------ category rail → grid view */
+  /* a spread of lines per world — stand-ins for a real wallpaper library */
+  var CAT_LINES = {
+    stoic: [
+      "The work is the point.", "Amor fati.", "You control the effort, not the outcome.",
+      "Memento mori.", "Do the hard thing first.", "No one is coming. Begin.",
+      "The obstacle is the way.", "Suffer less in imagination.", "Wake. Rise. Repeat.",
+      "Be strict with yourself, tolerant of others.", "Discipline is self-respect.",
+      "Waste no time arguing what a good person is. Be one."
+    ],
+    soft: [
+      "You are allowed to begin again.", "Rest is not a reward.", "Today gets to be gentle.",
+      "Slow is still forward.", "You don't have to earn ease.", "Softness is a strength.",
+      "Let it be easy.", "Your pace is the right pace.", "Peace is productive.",
+      "Bloom on your own time.", "Nothing to prove today.", "Breathe. You're okay."
+    ],
+    scripture: [
+      "Be still. He has you.", "Faith over fear.", "He restores my soul.",
+      "Be strong and courageous.", "His mercies are new every morning.",
+      "I can do all things through Him.", "The Lord is my shepherd.",
+      "Trust Him with all your heart.", "Fear not, for I am with you.",
+      "She is clothed with strength.", "Walk by faith, not by sight.", "Cast your cares on Him."
+    ],
+    builder: [
+      "Build it in the quiet.", "Ship it, then fix it.", "Small reps, compounding.",
+      "Your only competition is yesterday.", "Do it before you're ready.",
+      "Consistency beats intensity.", "Make something people want.", "The grind is the glory.",
+      "Start ugly. Improve daily.", "Outwork the doubt.", "Build in silence.", "Reps over excuses."
+    ],
+    aesthetic: [
+      "Today gets to be soft.", "Romanticize the ordinary.", "Glow in your own light.",
+      "Pretty things, quiet mornings.", "Live an inspired life.", "Create your own sunshine.",
+      "Beauty in the everyday.", "Curate your calm.", "Main character energy.",
+      "Golden hour, always.", "Make it beautiful.", "Soft focus, clear heart."
+    ],
+    rebuild: [
+      "You are still here.", "Brick by brick.", "Fall seven, rise eight.",
+      "The comeback is stronger.", "Scars are proof you healed.", "Begin where you are.",
+      "You survived the worst day.", "Growth after the break.", "Rise from your own ashes.",
+      "One honest step.", "Still standing. Still going.", "New foundations."
+    ]
+  };
+
+  var gridReturnFocus = null;
+
+  function openGrid(key){
+    var w = WORLDS[indexOfWorld(key)];
+    if (!w) return;
+    var lines = CAT_LINES[key] || [w.line];
+
+    gridStrip.innerHTML = '';
+    lines.forEach(function(text){
+      var tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'grid-tile';
+      tile.setAttribute('aria-label', w.name + ' wallpaper — “' + text + '”');
+      var s = document.createElement('span');
+      s.textContent = text;
+      tile.appendChild(s);
+      tile.addEventListener('click', function(){
+        selectedWallpaper = { world: key, line: text };
+        console.log('Wallpaper picked from grid', selectedWallpaper);
+        gridReturnFocus = null;          /* the sheet takes over focus */
+        closeGrid();
+        openSheet();
+      });
+      gridStrip.appendChild(tile);
+    });
+
+    gridName.textContent = w.name;
+    gridCount.textContent = lines.length + ' wallpapers';
+    gridView.className = 'grid-view p--' + key;
+    gridView.hidden = false;
+    gridReturnFocus = document.activeElement;
+    requestAnimationFrame(function(){ gridView.classList.add('show'); });
+    document.addEventListener('keydown', onGridKey);
+    setTimeout(function(){ gridBack.focus(); }, 60);
+  }
+
+  function closeGrid(){
+    if (gridView.hidden) return;
+    gridView.classList.remove('show');
+    document.removeEventListener('keydown', onGridKey);
+    var done = false;
+    function finish(){
+      if (done) return;
+      done = true;
+      gridView.hidden = true;
+      gridView.removeEventListener('transitionend', finish);
+      if (gridReturnFocus && gridReturnFocus.focus) gridReturnFocus.focus();
+    }
+    gridView.addEventListener('transitionend', finish);
+    setTimeout(finish, 420);
+  }
+
+  function onGridKey(e){
+    if (e.key === 'Escape'){ closeGrid(); return; }
+    if (e.key !== 'Tab') return;
+    var list = Array.prototype.slice.call(
+      gridView.querySelectorAll('button:not([disabled])')
+    ).filter(function(el){ return el.offsetParent !== null; });
+    if (!list.length) return;
+    var first = list[0], last = list[list.length - 1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+
+  if (catRail){
+    Array.prototype.forEach.call(catRail.querySelectorAll('.cat-btn'), function(btn){
+      btn.addEventListener('click', function(){ openGrid(btn.dataset.world); });
+    });
+  }
+  gridBack.addEventListener('click', closeGrid);
 
   /* ------------------------------------------------ capture sheet */
   var lastFocused = null;

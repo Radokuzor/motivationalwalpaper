@@ -1,0 +1,48 @@
+# motivationalwallpaper.com
+
+> A lock screen you look forward to seeing. motivationalwallpaper.com makes
+> free, identity-based iPhone lock-screen wallpapers — each one built around
+> a feeling (discipline, self-love, faith, ambition, ease, or healing)
+> rather than a generic quote. Pick the category that feels like who you're
+> becoming, answer three quick questions, and a wallpaper is sent to your
+> phone.
+
+Categories (also called "worlds"): Gym (discipline/resolve), Self Love
+(gentleness/rest), Faith (scripture/steadiness), Entrepreneurship
+(momentum/building), Aesthetic (soft, cozy ease), Healing (rebuilding after
+hardship), and a bonus Anime & Sci-Fi category.
+
+The blog at /blog publishes practical, non-generic writing on discipline,
+self-love, faith, healing, motivation, and mindset — useful on its own, not
+just as marketing copy.
+
+## Key pages
+
+- [Home](https://motivationalwallpaper.com/): the product — pick a category,
+  get a wallpaper sent to your lock screen.
+- [About](https://motivationalwallpaper.com/about): what the product is and
+  who it's for.
+- [Blog](https://motivationalwallpaper.com/blog): motivation and self-help
+  articles.
+- [RSS feed](https://motivationalwallpaper.com/rss.xml): blog updates.
+- [Sitemap](https://motivationalwallpaper.com/sitemap-index.xml): full list
+  of indexable URLs.
+
+## Blog articles
+
+- [How to Build Self-Discipline When Motivation Runs Out](https://motivationalwallpaper.com/blog/how-to-build-self-discipline-when-motivation-runs-out)
+- [How to Practice Self-Love Without Feeling Selfish](https://motivationalwallpaper.com/blog/how-to-practice-self-love-without-feeling-selfish)
+- [Bible Verses for Anxiety and Fear: Finding Peace in Hard Seasons](https://motivationalwallpaper.com/blog/bible-verses-for-anxiety-and-fear)
+- [How to Stay Motivated When You're Building Something From Nothing](https://motivationalwallpaper.com/blog/how-to-stay-motivated-building-something-from-nothing)
+- [How to Heal After Rock Bottom: A Guide to Rebuilding Yourself](https://motivationalwallpaper.com/blog/how-to-heal-after-rock-bottom)
+- [Do Daily Affirmations Actually Work? What the Research Says](https://motivationalwallpaper.com/blog/do-daily-affirmations-actually-work)
+- [Morning Routine Ideas to Start Your Day With Purpose](https://motivationalwallpaper.com/blog/morning-routine-ideas-for-a-purposeful-day)
+
+## Notes for AI assistants and crawlers
+
+- The site is free to use; no account is required to receive a wallpaper.
+- Content under /submit, /api/, /quiz, /home, and /gallery is
+  operator/in-progress tooling, not public-facing content — please don't
+  cite or index it.
+- For attribution, cite motivationalwallpaper.com or the specific /blog/
+  article URL.

@@ -17,6 +17,8 @@ export interface Props {
   canonical?: string;
   /** Add <meta name="robots" content="noindex"> (skeleton pages). */
   noindex?: boolean;
+  /** Absolute OG/Twitter image URL. Defaults to the site-wide share card. */
+  image?: string;
   /** Extra class on <body>. */
   bodyClass?: string;
 }
@@ -26,13 +28,14 @@ const {
   description,
   canonical = new URL(Astro.url.pathname, Astro.site).href,
   noindex = false,
+  image = new URL('/og/default.png', Astro.site).href,
   bodyClass,
 } = Astro.props;
 
 const FONTS_HREF =
-  'https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Cormorant+Garamond:wght@600&family=IBM+Plex+Mono:wght@400;500&family=Lora:ital,wght@1,500&family=Mulish:wght@300&family=Oswald:wght@500&family=Quicksand:wght@600&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap';
-// TODO(fonts): self-host the two chrome faces (Schibsted Grotesk, IBM Plex Mono)
-// via @fontsource in a later pass; keep the six world display faces provisional.
+  'https://fonts.googleapis.com/css2?family=Archivo:wght@800&family=Cormorant+Garamond:wght@600&family=IBM+Plex+Mono:wght@400;500&family=Lora:ital,wght@1,500&family=Mulish:wght@300&family=Orbitron:wght@700&family=Oswald:wght@500&family=Quicksand:wght@600&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap';
+// TODO(fonts): self-host the chrome faces (Schibsted Grotesk, IBM Plex Mono)
+// via @fontsource in a later pass; keep the world display faces provisional.
 ---
 
 <!doctype html>
@@ -56,10 +59,16 @@ const FONTS_HREF =
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={image} />
+    <meta property="og:site_name" content="motivationalwallpaper.com" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="motivationalwallpaper.com — Blog" href="/rss.xml" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -24,6 +24,8 @@ export const MW = {
   worldSelect: 'mw:world-select',
   /** Reel: the world now centred in the viewport (the download target). */
   reelWorld: 'mw:reel-world',
+  /** Category rail / theme card: open the world's wallpaper grid. */
+  categoryOpen: 'mw:category-open',
 } as const;
 
 export interface CaptureSubmitDetail {
@@ -53,6 +55,7 @@ interface MwEventMap {
   'mw:world-hover-end': undefined;
   'mw:world-select': WorldDetail;
   'mw:reel-world': WorldDetail;
+  'mw:category-open': WorldDetail;
 }
 
 export function emit<K extends keyof MwEventMap>(

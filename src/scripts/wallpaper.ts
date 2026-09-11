@@ -1,16 +1,19 @@
 /**
  * Client-side wallpaper export.
  *
- * The six "wallpapers" are CSS gradients + a one-line message (see
- * `src/data/worlds.ts`) — there are no image files. `downloadWallpaper()` paints
- * the chosen world onto an off-screen canvas at phone-lock-screen resolution and
- * hands the visitor a PNG. It renders the *plain* wallpaper — gradient art + the
- * line — with none of the iOS mock chrome (clock, padlock, dynamic island).
+ * Each world is a CSS gradient + a one-line message (see `src/data/worlds.ts`)
+ * unless the operator has marked a real uploaded photo `preferred` for it
+ * (`GET /api/wallpapers?hero=1`) — then that photo replaces the gradient.
+ * `downloadWallpaper()` paints the chosen world onto an off-screen canvas at
+ * phone-lock-screen resolution and hands the visitor a PNG: gradient-or-photo
+ * art + the line, with none of the iOS mock chrome (clock, padlock, dynamic
+ * island).
  *
  * Called by CaptureSheet.astro on submit; the target world is whatever is
  * centred in the reel (Reel.astro broadcasts `mw:reel-world`).
  */
 import { WORLDS, type WorldKey } from '../data/worlds';
+import { getHeroMap } from './hero';
 
 type World = (typeof WORLDS)[number];
 
@@ -134,6 +137,45 @@ function paintArt(ctx: CanvasRenderingContext2D, art: string): void {
   ctx.fillRect(0, 0, W, H);
 }
 
+/** `background-size: cover; background-position: center` for a canvas. */
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement): void {
+  const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/**
+ * Probe on a disposable 1×1 canvas whether this image can be read back
+ * without a SecurityError — i.e. whether the response actually carried CORS
+ * headers. A canvas that ever taints stays tainted for its lifetime, so this
+ * must run on a throwaway canvas, never on the real export canvas.
+ */
+function isCorsClean(img: HTMLImageElement): boolean {
+  const probe = document.createElement('canvas');
+  probe.width = 1;
+  probe.height = 1;
+  const pctx = probe.getContext('2d');
+  if (!pctx) return false;
+  pctx.drawImage(img, 0, 0, 1, 1);
+  try {
+    pctx.getImageData(0, 0, 1, 1);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Per-world line treatment — mirrors LockScreen.astro `.wp-line` inflections. */
 const INFLECTION: Record<
   WorldKey,
@@ -145,6 +187,7 @@ const INFLECTION: Record<
   builder: { weight: 800, size: 0.072, upper: false, italic: false, spacing: '-0.02em' },
   aesthetic: { weight: 600, size: 0.072, upper: false, italic: false, spacing: '0em' },
   rebuild: { weight: 500, size: 0.082, upper: false, italic: true, spacing: '0em' },
+  anime: { weight: 700, size: 0.062, upper: false, italic: false, spacing: '0.02em' },
 };
 
 function wrapText(
@@ -217,7 +260,16 @@ export async function downloadWallpaper(key: WorldKey): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  paintArt(ctx, w.art);
+  // a preferred real photo, full quality, replaces the CSS gradient when the
+  // operator has set one for this world — falls back silently on any failure
+  // (no hero yet, network error, or the bucket lacking CORS for canvas export)
+  const hero = (await getHeroMap())[key];
+  const photo = hero ? await loadImage(hero.originalUrl) : null;
+  if (photo && isCorsClean(photo)) {
+    drawCover(ctx, photo);
+  } else {
+    paintArt(ctx, w.art);
+  }
   await drawLine(ctx, w);
 
   await new Promise<void>((resolve) => {

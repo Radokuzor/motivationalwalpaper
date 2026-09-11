@@ -16,14 +16,18 @@ Companion briefs (self-contained, paste into a fresh chat to build):
 | Framework | **Astro 5.18**, `output: 'static'` — pages prerender, SSR routes opt out with `export const prerender = false` |
 | Host | **Vercel**, adapter `@astrojs/vercel` **v8** (`vercel()` from `@astrojs/vercel`) |
 | Node | `engines.node` `^20.3.0 \|\| >=22.0.0`; Vercel runs **nodejs22.x**; build locally on Node 20 (`PATH="$HOME/.local/node-v20/bin:$PATH"`) or 24 |
-| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collection `survey_responses`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
+| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collections `survey_responses`, `figure_quotes`, `wallpaper_assets`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
+| Assets | **Firebase Cloud Storage** (`FIREBASE_STORAGE_BUCKET`), `wallpaper_assets/<id>/original.*` + `thumb.webp`. Written by `/submit` + `/api/wallpapers` via Admin SDK; browser reads use signed URLs. `storage.rules` deny-all. |
 | Other deps | `@astrojs/sitemap` 3.7.4 (unpinned for Astro 5), `@astrojs/check` 0.9.10, `@vercel/analytics` 2.0.1 |
 | Secrets | `.env` (gitignored) + Vercel env vars: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`. Service-account JSON is gitignored (`*firebase-adminsdk*.json`). |
 
 ## What the site does today
 
 **Screen One (`/`)** — opens as an iOS lock screen. Vertical snap-scroll reel of 6
-wallpapers; desktop adds a theme grid on the right half.
+wallpapers; desktop adds a theme grid on the right half. The reel auto-advances
+one panel every 5s until the visitor drives it themselves — `touchstart` /
+`wheel` / `pointerdown` on the reel (or opening capture/a category grid) kills
+the timer for good; `prefers-reduced-motion` skips it entirely.
 
 1. **CTA "Download"** (pinned on the reel) → opens the capture sheet. The reel
    re-announces the wallpaper currently on screen so the sheet knows the target.
@@ -82,17 +86,125 @@ wallpapers; desktop adds a theme grid on the right half.
 | **Custom domain** | `astro.config.mjs` hard-codes `site: 'https://motivationalwallpaper.com'` for canonical/sitemap. Attach the domain or update `site`. |
 | **`/home?profile=…` redirect** | Quiz completion dead-ends at "Welcome". `index.astro` listens for `mw:quiz-complete` but the redirect is a TODO (brief said leave it). |
 | **Admin page** | Spec'd in `admin-build-brief.md`, not built. `/admin` SSR + Basic Auth + table + CSV export over `survey_responses`. |
-| **ThemeGrid labels** | Desktop grid still labels its 6 cards "Stoic / Soft Life / Scripture / Builder / Aesthetic / Rebuild". Keep, drop, or replace — undecided. |
+| **Category display names** | Resolved 2026-09-10 — see History. Internal `WorldKey`/`profile` values unchanged; only the user-facing `name` changed. |
+| **`/gallery`** | Still the `noindex` skeleton — real per-category browsing (images, per-item copy) not built. Header "Categories" links point to `/gallery#<slug>` anchors, which exist now but the page itself is still a placeholder. |
+| **Storage bucket CORS** | Hero photos render on-screen (CSS backgrounds, no CORS needed) regardless, but baking one into the exported PNG needs the Firebase Storage bucket to serve `Access-Control-Allow-Origin` on signed-URL reads. Unconfigured today → `downloadWallpaper()` silently falls back to the gradient for that world. Fix: `gsutil cors set <file> gs://<bucket>` allowing the site origin. |
 | **Uncommitted** | `Quiz.astro`, `Reel.astro`, `api/survey.ts`, `404.astro`, `gallery.astro` (progressive save + download-target + "world" copy). |
+
+## Wallpaper pipeline
+
+**`/submit` — built.** Ungated operator page: upload images, file each under any
+number of categories (the same photo can serve several, or leave it unsorted),
+mark one **Preferred** per category, re-file/re-preferred/delete from a live
+grid. The earlier Instagram/Apify scraper was abandoned (Reel-only feeds,
+ToS/licensing) — sourcing is now manual: the operator supplies files they own
+or have licensed.
+
+- `src/pages/submit.astro` — `prerender = false`, `noindex`, robots-disallowed.
+  Server-lists the latest 300 `wallpaper_assets` with signed thumb URLs.
+  Category picker + re-file grid are checkbox fieldsets (not a `<select>`) so
+  a wallpaper can carry multiple `worlds`; a "★ Preferred" checkbox sits
+  alongside. Client JS uploads one file per request (native multi-file form
+  POST still works as a no-JS fallback) and canvas-downscales anything
+  > ~3.8 MB to ≤ 2960px JPEG so each body clears Vercel's ~4.5 MB serverless
+  limit.
+- `POST /api/wallpapers` — `multipart/form-data` (`file` ×N, `world` ×0-N
+  repeated field, `preferred` `'1'`, `website` honeypot). Per file: `sharp`
+  decode/validate (jpeg/png/webp/avif, short edge ≥ 500px) → sha1-16 id →
+  `thumb.webp` (640w) + 64-bit dHash → original + thumb to Storage
+  `wallpaper_assets/<id>/` → upsert `wallpaper_assets/<id>`. Identical bytes
+  upsert in place. JSON result to fetch callers, 303 → `/submit` otherwise.
+- `PATCH /api/wallpapers/:id` `{ worlds?, preferred? }` (either/both) — re-file
+  and/or re-preferred (`status` follows `worlds`). `DELETE /api/wallpapers/:id`
+  — remove doc + Storage folder.
+- **`GET /api/wallpapers`** — public read side (no auth; the catalog itself
+  isn't sensitive), consumed client-side so an upload shows up on the live
+  site without a rebuild: `?world=<key>` → that category's assets, preferred
+  first; `?hero=1` → one photo per world (freshest `preferred` doc that
+  includes it) as `{thumbUrl, originalUrl}`, used by Reel/ThemeGrid/
+  CategoryGrid/PNG export to replace the CSS gradient. Firestore reads are
+  equality/array-contains only + in-memory sort, so no composite index needed.
+- Helpers in `src/lib/wallpaperAssets.ts`; `src/lib/firebase.ts` now also exports
+  `bucket`. Storage/Firestore rules stay deny-all — browser `<img>`s use
+  short-lived v4 signed URLs minted server-side.
+- `wallpaper_assets` doc: `status` `'sorted'|'unsorted'`, `worlds: WorldKey[]`,
+  `preferred: boolean`, `source:'submit'`, `sha`, `originalFilename`,
+  `license:'owner-supplied'`, `width`/`height`/`aspect`, `bytes`, `format`,
+  `phash`, `storageOriginal`, `storageThumb`, `createdAt`/`updatedAt`.
+
+**Hero photos — built 2026-09-11.** A `preferred` asset becomes its world's
+real wallpaper everywhere, replacing `src/data/worlds.ts`'s CSS gradient:
+`Reel.astro` panels (+ their loop clones), `ThemeGrid.astro` cards, and
+`CategoryGrid.astro`'s backdrop (cascades to all 12 tiles via CSS custom
+property inheritance) swap `--art` to the signed `thumbUrl` once
+`src/scripts/hero.ts`'s `getHeroMap()` resolves — pure progressive
+enhancement, gradient stays until/unless it resolves. `downloadWallpaper()`
+in `wallpaper.ts` additionally tries to bake the **original**-quality photo
+into the exported PNG, probing CORS-cleanliness on a disposable canvas first
+(`isCorsClean`) and falling back to the gradient if the Storage bucket
+hasn't got CORS configured for the export step specifically (on-screen CSS
+backgrounds need no CORS at all — only the canvas export does).
+
+**Not built:** per-world/per-category manual ordering beyond preferred-first;
+pairing a wallpaper with its own custom line (grid tiles still show the
+world's fixed 12 `gridLines` over whichever photo is preferred).
+
+## SEO & blog
+
+**Built 2026-09-11.** `/blog` — a content collection (`src/content.config.ts`,
+Astro 5 content-layer `glob` loader over `src/content/blog/*.md`) of
+motivation/self-help articles, indexed and in the sitemap. Not wallpaper
+marketing copy — genuine, specific writing on discipline, self-love, faith,
+entrepreneurship, healing, and mindset, each with an optional `relatedWorld`
+that drives a soft in-article CTA to `/gallery#<slug>`.
+
+- `/blog` — index, lists all non-draft posts newest-first.
+- `/blog/<slug>` — post page (`src/pages/blog/[slug].astro`). Renders the
+  Markdown body inside `ChromeLayout`, plus JSON-LD: `Article` +
+  `BreadcrumbList` always, `FAQPage` when the post's frontmatter has `faqs`
+  (AI Overview / citation bait — see `01_strategy_brief.md` #2).
+- 6 posts shipped: self-discipline, self-love, Bible verses for anxiety,
+  staying motivated building a business, healing after rock bottom, do
+  affirmations work, morning routines. 3 of the 6 carry `faqs`.
+- `SiteHeader.astro` gained a **Blog** tab (Home / Blog / About).
+- `/rss.xml` (`src/pages/rss.xml.ts`, `@astrojs/rss`) — blog feed; linked from
+  `<head>` via `rel="alternate"` in `BaseLayout`.
+
+**Sitemap.** `astro.config.mjs`'s sitemap `filter` flipped from an allow-list
+(only `/`) to a deny-list of known-`noindex` prefixes (`/home`, `/gallery`,
+`/quiz`, `/submit`, `/iphone-wallpapers`, `/api`, `/404`) — so `/`, `/about`,
+`/blog`, and every `/blog/*` post are now listed automatically, and any new
+indexable page is included without touching this file again. As each
+skeleton page (`/gallery`, `/iphone-wallpapers/*`) earns real content and
+drops its `noindex` meta tag, drop its prefix from this list too.
+
+**Structured data / social.** `index.astro` carries sitewide `Organization` +
+`WebSite` JSON-LD (`@graph`) for entity resolution (brief's "Gemini
+optimization" item). `BaseLayout` gained `og:image`/`twitter:image` (previously
+missing entirely) defaulting to `public/og/default.png` — a generated 1200×630
+share card (brand tokens, no font dependency issues since it's rasterized via
+`sharp`+SVG, source script was scratch/not committed) — overridable per-page
+via the new `image` prop (threaded through `ChromeLayout` too).
+
+**AI discoverability.** `public/llms.txt` — site summary + key page/article
+links, following the emerging llms.txt convention some AI crawlers/agents
+check for.
+
+**Not done / open:**
+- Google Search Console + Bing Webmaster Tools verification (needs the
+  domain owner to add a verification meta tag or DNS record — can't fabricate
+  a verification code here).
+- Real per-post OG images (all posts currently share the one default card).
+- `/gallery` and `/iphone-wallpapers/*` are still `noindex` skeletons; once
+  built for real, remove `noindex` and drop their prefix from the sitemap
+  filter above.
+- Pinterest / TikTok / Reels distribution (brief's other traffic-growth
+  levers) — outside this pass, no code involved.
 
 ## Deferred by design
 
 - **Beehiiv** (email) and any **SMS** provider — until traction. Rows stamp
   `emailStatus` / `smsStatus: 'pending'` for a later migration to drain.
-- **Wallpaper pipeline** — plan is to source popular wallpapers and bucket them
-  by profile. Flag: scraping famous accounts is likely against their ToS and
-  redistributes copyrighted images — settle sourcing (licensed / original /
-  permissioned) before it ships publicly.
 - Rate limiting / CAPTCHA beyond the honeypot.
 
 ## Terminology
@@ -104,6 +216,46 @@ says "wallpapers" / "looks", never "world".
 
 ## History
 
+- **2026-09-11** — `/submit` reworked for multi-category tagging: `world`
+  (single key) → `worlds: WorldKey[]` end to end (`wallpaperAssets.ts`'s
+  `normalizeWorlds`, both API routes, the submit page's checkbox UI). Added a
+  **Preferred** flag per asset and a public `GET /api/wallpapers` (list by
+  world, `?hero=1` map) so an upload is visible on the live site immediately.
+  Wired preferred photos in as each world's real hero image, replacing the
+  CSS gradient in the reel/theme grid/category grid/PNG export (see
+  "Hero photos" under Wallpaper pipeline) — new `src/scripts/hero.ts`.
+  Added the reel auto-advance timer (see Screen One, above). Smoke-tested
+  end to end against the real `motivewallpaper-220e4` project (multi-world
+  upload, hero map, PATCH validation, delete) — test row cleaned up after.
+
+- **2026-09-10** — Category display names renamed for relatability: Stoic→Gym,
+  Soft Life→Self Love, Scripture→Faith, Builder→Entrepreneurship,
+  Rebuild→Healing (Aesthetic unchanged). Only `World.name` changed — `key`,
+  `slug`, `profile`, and quiz routing untouched. Added a 7th bonus category,
+  **Anime & Sci-Fi** (`key: 'anime'`), browsable everywhere (ThemeGrid,
+  CategoryRail, CategoryGrid, gallery) but excluded from the reel and from
+  quiz routing (`profile` omitted, `inReel: false` — new `REEL_WORLDS`/
+  `REEL_ORDER` in `src/data/worlds.ts` filter it out; `Reel.astro` updated to
+  read `REEL_WORLDS`). Added its display face (Orbitron) to the Google Fonts
+  request and `--face-anime` token, plus matching inflections in
+  `LockScreen.astro` and `wallpaper.ts`'s canvas export.
+
+  Added a shared header nav (`SiteHeader.astro`: wordmark + Home/About tabs +
+  category quick-links) — already used site-wide via `ChromeLayout` on
+  content pages; now also mounted inside `ThemeGrid.astro` (desktop, right
+  pane only) and `CategoryGrid.astro` (mobile grid sheet only, hidden
+  ≥900px so it isn't duplicated). Category links navigate to `/gallery#slug`
+  everywhere except Screen One, where a small script hijacks the click to
+  emit `mw:category-open` and open the grid in place instead. Built
+  `src/pages/about.astro` (plain `ChromeLayout` page) as the About tab's
+  destination. Added `id={w.slug}` anchors to `/gallery` tiles.
+
+- **2026-09-09** — `/submit` built: ungated operator page to upload wallpapers
+  and file them under the six worlds, `POST` + `PATCH`/`DELETE /api/wallpapers`,
+  `wallpaper_assets` collection + Cloud Storage (originals + signed-URL thumbs),
+  `sharp` dep, `storage.rules` deny-all, `FIREBASE_STORAGE_BUCKET` env var. An
+  earlier same-day Instagram/Apify scraper attempt was scrapped (Reel-only feeds
+  + licensing); `APIFY_TOKEN` removed.
 - **2026-09-09** — Astro 4→5, `@astrojs/vercel` 7→8, `output: hybrid`→`static`,
   Node target → 22. Progressive per-step autosave (`responseId` upsert, partial
   rows for abandoned flows). Client-side wallpaper PNG export on Download. CTAs

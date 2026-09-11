@@ -1,0 +1,13 @@
+rules_version = '2';
+// Deny ALL client access. /submit uploads and the /api/wallpapers routes read
+// and write objects through the Firebase Admin SDK server-side (src/lib/
+// firebase.ts), which bypasses these rules. Browser <img> tags load thumbnails
+// via short-lived v4 signed URLs minted server-side, not direct reads.
+// Apply in the Firebase console: Storage -> Rules.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

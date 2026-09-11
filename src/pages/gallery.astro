@@ -24,7 +24,7 @@ import { WORLDS } from '../data/worlds';
   <div class="grid">
     {
       WORLDS.map((w) => (
-        <article class="tile">
+        <article class="tile" id={w.slug}>
           <div class="tile__art" style={`--art:${w.art};`}>
             <LockScreen world={w} brandTag={false} />
           </div>

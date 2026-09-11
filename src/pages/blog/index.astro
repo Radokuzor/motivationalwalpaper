@@ -1,0 +1,117 @@
+---
+/**
+ * /blog — index of motivation / self-help articles (see 01_strategy_brief.md
+ * "Traffic growth priorities" #3: hub pages as AI-citation magnets). These
+ * exist to rank for search intent adjacent to the product, not just
+ * "wallpaper" queries — indexed (no noindex), listed in the sitemap.
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
+);
+
+const title = 'Blog — Motivation, discipline & self-help — motivationalwallpaper.com';
+const description =
+  'Practical, honest writing on discipline, self-love, faith, healing, and staying motivated — for the days motivation alone isn’t enough.';
+
+const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<ChromeLayout title={title} description={description} narrow={false}>
+  <div class="wrap">
+    <h1>The blog</h1>
+    <p class="lead">
+      Practical, honest writing on discipline, self-love, faith, healing, and
+      staying motivated — for the days motivation alone isn't enough.
+    </p>
+
+    <ul class="posts">
+      {
+        posts.map((post) => (
+          <li class="card">
+            <a href={`/blog/${post.id}`} class="card__link">
+              <span class="card__eyebrow">{post.data.category}</span>
+              <h2 class="card__title">{post.data.title}</h2>
+              <p class="card__desc">{post.data.description}</p>
+              <time class="card__date" datetime={post.data.publishDate.toISOString()}>
+                {dateFmt.format(post.data.publishDate)}
+              </time>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</ChromeLayout>
+
+<style>
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 2.5rem;
+  }
+  .posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    overflow: hidden;
+  }
+  .card {
+    background: var(--surface);
+  }
+  .card__link {
+    display: block;
+    padding: 22px 24px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card__link:hover {
+    background: var(--surface-2);
+  }
+  .card__eyebrow {
+    display: inline-block;
+    font-size: var(--t-label-size);
+    font-weight: var(--t-label-weight);
+    letter-spacing: var(--t-label-track);
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin-bottom: 8px;
+  }
+  .card__title {
+    font-size: 1.1875rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .card__desc {
+    margin: 0 0 10px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    max-width: 62ch;
+  }
+  .card__date {
+    display: block;
+    font-size: var(--t-small-size);
+    color: var(--ink-faint);
+  }
+</style>

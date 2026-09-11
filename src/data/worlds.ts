@@ -19,7 +19,8 @@ export type WorldKey =
   | 'scripture'
   | 'builder'
   | 'aesthetic'
-  | 'rebuild';
+  | 'rebuild'
+  | 'anime';
 
 /** Preset customer profile a world routes to (doc 02). */
 export type ProfileKey =
@@ -41,13 +42,20 @@ export interface World {
   name: string;
   /** URL-safe slug, e.g. "soft-life". */
   slug: string;
-  /** Routed preset profile. */
-  profile: ProfileKey;
+  /** Routed preset profile. Omitted for bonus categories the quiz never routes to. */
+  profile?: ProfileKey;
+  /** Reel inclusion — set false to keep a world out of the six-panel swipe reel
+   *  and show it only as a browsable category. Defaults to true. */
+  inReel?: boolean;
   /** "<name>, <age> — <feeling>" from §08. */
   persona: string;
   feeling: string;
   /** The wallpaper line — one line, <= 6 words, set in the world's display face. */
   line: string;
+  /** Stand-in wallpaper library for this world — the tiles in the category grid
+   *  (Screen One's floating rail). Placeholder lines until a real image collection
+   *  lands; `line` is always the first entry. */
+  gridLines: string[];
   /** Full CSS background value for the full-bleed art. */
   art: string;
   /** `--fg` — overlay text colour on this artwork. */
@@ -69,12 +77,26 @@ export interface World {
 export const WORLDS: World[] = [
   {
     key: 'stoic',
-    name: 'Stoic',
+    name: 'Gym',
     slug: 'stoic',
     profile: 'marcus',
     persona: 'Marcus, 24 — resolve',
     feeling: 'resolve',
     line: 'The work is the point.',
+    gridLines: [
+      'The work is the point.',
+      'Amor fati.',
+      'You control the effort, not the outcome.',
+      'Memento mori.',
+      'Do the hard thing first.',
+      'No one is coming. Begin.',
+      'The obstacle is the way.',
+      'Suffer less in imagination.',
+      'Wake. Rise. Repeat.',
+      'Be strict with yourself, tolerant of others.',
+      'Discipline is self-respect.',
+      'Waste no time arguing what a good person is. Be one.',
+    ],
     art: 'radial-gradient(125% 85% at 50% 6%, #3A3F45 0%, #17191d 46%, #0C0D0F 100%)',
     overlay: '#FFFFFF',
     lineColor: '#FFFFFF',
@@ -90,12 +112,26 @@ export const WORLDS: World[] = [
   },
   {
     key: 'soft',
-    name: 'Soft Life',
+    name: 'Self Love',
     slug: 'soft-life',
     profile: 'sarah',
     persona: 'Sarah, 19 — possibility',
     feeling: 'possibility',
     line: 'You are allowed to begin again.',
+    gridLines: [
+      'You are allowed to begin again.',
+      'Rest is not a reward.',
+      'Today gets to be gentle.',
+      'Slow is still forward.',
+      "You don't have to earn ease.",
+      'Softness is a strength.',
+      'Let it be easy.',
+      'Your pace is the right pace.',
+      'Peace is productive.',
+      'Bloom on your own time.',
+      'Nothing to prove today.',
+      "Breathe. You're okay.",
+    ],
     art: 'linear-gradient(178deg, #FBF4EC 0%, #F3D9DA 46%, #C9AE97 100%)',
     overlay: '#1B1B1C',
     lineColor: '#1B1B1C',
@@ -111,12 +147,26 @@ export const WORLDS: World[] = [
   },
   {
     key: 'scripture',
-    name: 'Scripture',
+    name: 'Faith',
     slug: 'scripture',
     profile: 'james',
     persona: 'Pastor James, 42 — steadiness',
     feeling: 'steadiness',
     line: 'Be still. He has you.',
+    gridLines: [
+      'Be still. He has you.',
+      'Faith over fear.',
+      'He restores my soul.',
+      'Be strong and courageous.',
+      'His mercies are new every morning.',
+      'I can do all things through Him.',
+      'The Lord is my shepherd.',
+      'Trust Him with all your heart.',
+      'Fear not, for I am with you.',
+      'She is clothed with strength.',
+      'Walk by faith, not by sight.',
+      'Cast your cares on Him.',
+    ],
     art: 'linear-gradient(180deg, #1B2440 0%, #131A2B 52%, #0D1220 100%)',
     overlay: '#EFE7D3',
     lineColor: '#EFE7D3',
@@ -132,12 +182,26 @@ export const WORLDS: World[] = [
   },
   {
     key: 'builder',
-    name: 'Builder',
+    name: 'Entrepreneurship',
     slug: 'builder',
     profile: 'jerome',
     persona: 'Jerome, 28 — momentum',
     feeling: 'momentum',
     line: 'Build it in the quiet.',
+    gridLines: [
+      'Build it in the quiet.',
+      'Ship it, then fix it.',
+      'Small reps, compounding.',
+      'Your only competition is yesterday.',
+      "Do it before you're ready.",
+      'Consistency beats intensity.',
+      'Make something people want.',
+      'The grind is the glory.',
+      'Start ugly. Improve daily.',
+      'Outwork the doubt.',
+      'Build in silence.',
+      'Reps over excuses.',
+    ],
     art: 'radial-gradient(120% 78% at 50% 0%, #202227 0%, #131417 44%, #0A0A0A 100%)',
     overlay: '#FFFFFF',
     lineColor: '#C79A3E',
@@ -159,6 +223,20 @@ export const WORLDS: World[] = [
     persona: 'Grace, 16 — ease',
     feeling: 'ease',
     line: 'Today gets to be soft.',
+    gridLines: [
+      'Today gets to be soft.',
+      'Romanticize the ordinary.',
+      'Glow in your own light.',
+      'Pretty things, quiet mornings.',
+      'Live an inspired life.',
+      'Create your own sunshine.',
+      'Beauty in the everyday.',
+      'Curate your calm.',
+      'Main character energy.',
+      'Golden hour, always.',
+      'Make it beautiful.',
+      'Soft focus, clear heart.',
+    ],
     art: 'linear-gradient(158deg, #E4DEF3 0%, #DCEEE4 54%, #F6DDE8 100%)',
     overlay: '#3A3A3A',
     lineColor: '#3A3A3A',
@@ -174,12 +252,26 @@ export const WORLDS: World[] = [
   },
   {
     key: 'rebuild',
-    name: 'Rebuild',
+    name: 'Healing',
     slug: 'rebuild',
     profile: 'diane',
     persona: 'Diane, 34 — strength',
     feeling: 'strength',
     line: 'You are still here.',
+    gridLines: [
+      'You are still here.',
+      'Brick by brick.',
+      'Fall seven, rise eight.',
+      'The comeback is stronger.',
+      'Scars are proof you healed.',
+      'Begin where you are.',
+      'You survived the worst day.',
+      'Growth after the break.',
+      'Rise from your own ashes.',
+      'One honest step.',
+      'Still standing. Still going.',
+      'New foundations.',
+    ],
     art: 'linear-gradient(168deg, #C4CDBE 0%, #D8B9A5 100%)',
     overlay: '#3A3A3A',
     lineColor: '#3A3A3A',
@@ -193,10 +285,50 @@ export const WORLDS: World[] = [
       { name: 'warm white', hex: '#F4EFE8' },
     ],
   },
+  {
+    key: 'anime',
+    name: 'Anime & Sci-Fi',
+    slug: 'anime-scifi',
+    inReel: false,
+    persona: 'Kai, 20 — escapism',
+    feeling: 'escapism',
+    line: 'Protagonist energy only.',
+    gridLines: [
+      'Protagonist energy only.',
+      "You're not the side character.",
+      'Power up in silence.',
+      'Every arc has a training montage.',
+      'This is your origin story.',
+      "The final boss isn't ready for you.",
+      'Level up while no one is watching.',
+      'Rewrite the timeline.',
+      'Main character, no filler episodes.',
+      'You chose this path. Walk it.',
+      'The next chapter loads now.',
+      'Legendary status: loading.',
+    ],
+    art: 'linear-gradient(158deg, #1B1035 0%, #3A1360 42%, #7A1FA6 74%, #E63C8C 100%)',
+    overlay: '#FFFFFF',
+    lineColor: '#FFFFFF',
+    scrim: 'rgba(0,0,0,.40)',
+    labelShadow: '0 1px 8px rgba(0,0,0,.55)',
+    displayFont: 'Orbitron (geometric display)',
+    tags: ['main character', 'arc', 'level up', 'not filler'],
+    palette: [
+      { name: 'void purple', hex: '#1B1035' },
+      { name: 'ultraviolet', hex: '#7A1FA6' },
+      { name: 'neon pink', hex: '#E63C8C' },
+    ],
+  },
 ];
 
-/** Reel order = array order. */
-export const REEL_ORDER: WorldKey[] = WORLDS.map((w) => w.key);
+/** The worlds that get a swipeable panel in the lock-screen reel — brand
+ *  bible's six, in reel order. Bonus categories (`inReel: false`) are
+ *  browsable everywhere else but never enter the reel. */
+export const REEL_WORLDS: World[] = WORLDS.filter((w) => w.inReel !== false);
+
+/** Reel order = REEL_WORLDS order. */
+export const REEL_ORDER: WorldKey[] = REEL_WORLDS.map((w) => w.key);
 
 const BY_KEY: Record<WorldKey, World> = Object.fromEntries(
   WORLDS.map((w) => [w.key, w]),
