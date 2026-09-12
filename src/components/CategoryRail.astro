@@ -4,7 +4,7 @@
  *
  * A vertical stack of glass pills flush to the right edge, one per world. Same
  * dark-glass treatment as the pinned CTA so it whispers. Hidden >=900px, where
- * ThemeGrid's "Browse by theme" already fills the right half.
+ * ThemeGrid's "All wallpapers" grid already fills the right half.
  *
  *  - emits  mw:category-open  { world }   (CategoryGrid opens the grid)
  *  - listens mw:reel-world                (mark the on-screen world as current)
@@ -91,7 +91,7 @@ import { WORLDS } from '../data/worlds';
     }
   }
 
-  /* desktop already has the "Browse by theme" grid */
+  /* desktop already has the "All wallpapers" grid */
   @media (min-width: 900px) {
     .cat-rail {
       display: none;

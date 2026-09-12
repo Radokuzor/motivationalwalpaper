@@ -1,34 +1,23 @@
 ---
 /**
  * ThemeGrid — the right 50% of Screen One on desktop (brand bible §07).
- * "Browse by theme": a 3-column grid of the six worlds as 9:16 cards.
- * Hidden below 900px (mobile is the reel alone).
+ * "All wallpapers": a 3-column grid of real uploaded photos, every category
+ * shuffled together (built client-side from `GET /api/wallpapers?feed=1`,
+ * the same feed the Reel uses). Hidden below 900px (mobile is the reel
+ * alone) — digging into one specific category there is what SiteHeader's
+ * sticky category nav above the grid is for.
  *
- *  - emits mw:world-hover / mw:world-hover-end  (desktop reel cross-fade)
- *  - emits mw:category-open                     (open that world's wallpaper grid)
+ *  - emits mw:world-hover / mw:world-hover-end  (puts that exact photo on the reel)
+ *  - emits mw:asset-select + mw:open-capture    (tile click — download this photo)
  */
-import { WORLDS } from '../data/worlds';
 import SiteHeader from './SiteHeader.astro';
 ---
 
-<aside class="browse" aria-label="Browse wallpapers by theme">
+<aside class="browse" aria-label="Browse wallpapers">
   <SiteHeader />
-  <p class="browse__label">Browse by theme</p>
-  <div class="theme-grid">
-    {
-      WORLDS.map((w) => (
-        <button
-          class="theme-card"
-          type="button"
-          data-world={w.key}
-          data-light={w.labelShadow === 'none' ? 'true' : 'false'}
-          style={`--art:${w.art};--label-shadow:${w.labelShadow};--fg:${w.overlay};`}
-        >
-          <span>{w.name}</span>
-        </button>
-      ))
-    }
-  </div>
+  <p class="browse__label">All wallpapers</p>
+  <p class="browse__empty" id="mw-browse-empty" hidden>No wallpapers yet — check back soon.</p>
+  <div class="photo-grid" id="mw-photo-grid"></div>
 </aside>
 
 <style>
@@ -49,7 +38,10 @@ import SiteHeader from './SiteHeader.astro';
   }
 
   /* bleed the shared SiteHeader to the pane's edges, then re-pad it to match
-     the aside's own inset so the wordmark/tabs line up with the grid below */
+     the aside's own inset so the wordmark/tabs line up with the grid below.
+     Sticky within `.browse`'s own scroll so the category nav (the way to
+     dig into one specific category, now that the grid below is a shuffled
+     mix of every category) stays reachable while the grid scrolls under it. */
   .browse :global(.site-header) {
     margin: -34px -34px 0;
     padding: 20px 34px 16px;
@@ -62,14 +54,19 @@ import SiteHeader from './SiteHeader.astro';
     text-transform: uppercase;
     color: var(--ink-faint);
   }
-
-  .theme-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+  .browse__empty {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--ink-faint);
   }
 
-  .theme-card {
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .photo-grid :global(.photo-tile) {
     position: relative;
     aspect-ratio: 9 / 16;
     border: 0;
@@ -79,27 +76,7 @@ import SiteHeader from './SiteHeader.astro';
     padding: 0;
     cursor: pointer;
   }
-  .theme-card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.28), transparent 45%);
-  }
-  .theme-card[data-light="true"]::after {
-    background: linear-gradient(0deg, rgba(255, 255, 255, 0.3), transparent 45%);
-  }
-  .theme-card span {
-    position: absolute;
-    left: 10px;
-    bottom: 9px;
-    z-index: 1;
-    font-weight: 600;
-    font-size: 13px;
-    letter-spacing: -0.01em;
-    color: var(--fg);
-    text-shadow: var(--label-shadow);
-  }
-  .theme-card:focus-visible {
+  .photo-grid :global(.photo-tile:focus-visible) {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
@@ -107,31 +84,64 @@ import SiteHeader from './SiteHeader.astro';
 
 <script>
   import { MW, emit } from '../scripts/events';
+  import { worldByKey } from '../data/worlds';
   import type { WorldKey } from '../data/worlds';
-  import { getHeroMap } from '../scripts/hero';
+
+  interface FeedAsset {
+    id: string;
+    thumbUrl: string;
+    originalUrl: string;
+    worlds: WorldKey[];
+  }
+
+  function shuffle<T>(items: T[]): T[] {
+    const out = items.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
 
   function init() {
-    const cards = document.querySelectorAll<HTMLButtonElement>('.theme-card');
-    cards.forEach((card) => {
-      const world = card.dataset.world as WorldKey | undefined;
-      if (!world) return;
-      const show = () => emit(MW.worldHover, { world });
-      const hide = () => emit(MW.worldHoverEnd);
-      card.addEventListener('mouseenter', show);
-      card.addEventListener('mouseleave', hide);
-      card.addEventListener('focus', show);
-      card.addEventListener('blur', hide);
-      card.addEventListener('click', () => emit(MW.categoryOpen, { world }));
-    });
+    const grid = document.getElementById('mw-photo-grid');
+    const emptyMsg = document.getElementById('mw-browse-empty');
+    if (!grid || !emptyMsg) return;
 
-    // real photo, when a category has a preferred one — replaces the gradient
-    getHeroMap().then((hero) => {
-      cards.forEach((card) => {
-        const world = card.dataset.world as WorldKey | undefined;
-        const asset = world ? hero[world] : undefined;
-        if (asset) card.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+    function tileFor(asset: FeedAsset): HTMLButtonElement {
+      const world = asset.worlds[0];
+      const w = worldByKey(world);
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'photo-tile';
+      tile.setAttribute('aria-label', `${w?.name ?? 'Wallpaper'} — open`);
+      tile.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+
+      const assetDetail = { id: asset.id, thumbUrl: asset.thumbUrl, originalUrl: asset.originalUrl };
+      const show = () => emit(MW.worldHover, { world, asset: assetDetail });
+      const hide = () => emit(MW.worldHoverEnd);
+      tile.addEventListener('mouseenter', show);
+      tile.addEventListener('mouseleave', hide);
+      tile.addEventListener('focus', show);
+      tile.addEventListener('blur', hide);
+      tile.addEventListener('click', () => {
+        // put this exact photo on the reel and go straight to the download flow
+        emit(MW.assetSelect, { world, asset: assetDetail });
+        emit(MW.openCapture);
       });
-    });
+      return tile;
+    }
+
+    fetch('/api/wallpapers?feed=1')
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data: { items?: FeedAsset[] }) => {
+        const items = shuffle(data.items ?? []);
+        grid.append(...items.map(tileFor));
+        emptyMsg.hidden = items.length > 0;
+      })
+      .catch(() => {
+        emptyMsg.hidden = false;
+      });
   }
 
   init();

@@ -341,6 +341,11 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     // CategoryGrid's own fetch) still has somewhere to render.
     let currentPanel: HTMLElement | null = null;
     let autoTimer: ReturnType<typeof setInterval> | undefined;
+    // the on-screen panel a grid-tile hover swapped the art on, and what was
+    // there before, so hover-end can put back exactly what was there — even
+    // if the reel auto-advanced to a different panel while hovering.
+    let hoverPanel: HTMLElement | null = null;
+    let hoverPrevArt: string | null = null;
 
     function panelFor(asset: FeedAsset): HTMLElement {
       const frag = template.content.cloneNode(true) as DocumentFragment;
@@ -507,16 +512,32 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     on(MW.openCapture, stopAuto);
     on(MW.categoryOpen, stopAuto);
 
-    // desktop cross-fade preview, driven by ThemeGrid — a quick colour peek
-    // at the category before entering the reel/grid proper.
+    // ThemeGrid's photo grid — hovering a tile puts that exact photo on the
+    // on-screen phone (not just a colour peek), then restores whatever was
+    // playing there once the pointer leaves.
     on(MW.worldHover, (detail) => {
+      if (detail.asset && currentPanel) {
+        if (hoverPanel !== currentPanel) {
+          hoverPanel = currentPanel;
+          hoverPrevArt = currentPanel.style.getPropertyValue('--art');
+        }
+        hoverPanel.style.setProperty('--art', `url("${detail.asset.thumbUrl}") center/cover no-repeat`);
+        return;
+      }
       const w = WORLDS.find((x) => x.key === detail.world);
       if (!w) return;
       preview.dataset.world = w.key;
       preview.style.cssText = `--art:${w.art};--scrim:${w.scrim};`;
       preview.classList.add('is-shown');
     });
-    on(MW.worldHoverEnd, () => preview.classList.remove('is-shown'));
+    on(MW.worldHoverEnd, () => {
+      if (hoverPanel && hoverPrevArt !== null) {
+        hoverPanel.style.setProperty('--art', hoverPrevArt);
+      }
+      hoverPanel = null;
+      hoverPrevArt = null;
+      preview.classList.remove('is-shown');
+    });
     on(MW.worldSelect, (detail) => {
       preview.classList.remove('is-shown');
       scrollToAsset((a) => a.worlds.includes(detail.world));
