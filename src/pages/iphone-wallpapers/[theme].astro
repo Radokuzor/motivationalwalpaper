@@ -52,13 +52,12 @@ const faqJsonLd = {
   <h1>{theme.h1}</h1>
   <p class="lead">{theme.intro}</p>
 
-  <div class="grid">
+  <p class="empty" id="theme-empty" hidden>No wallpapers yet for this look — check back soon.</p>
+
+  <div class="grid" id="theme-grid">
     {
       worlds.map((w) => (
-        <a class="card" href="/" style={`--art:${w.art};`}>
-          <span class="card__line" style={`color:${w.lineColor};font-family:var(--face-${w.key});`}>
-            {w.line}
-          </span>
+        <a class="card" href="/" data-world={w.key} hidden>
           <span class="card__name">{w.name}</span>
         </a>
       ))
@@ -78,6 +77,28 @@ const faqJsonLd = {
   </section>
 </ChromeLayout>
 
+<script>
+  import { getHeroMap } from '../../scripts/hero';
+  import type { WorldKey } from '../../data/worlds';
+
+  const grid = document.getElementById('theme-grid') as HTMLElement;
+  const emptyMsg = document.getElementById('theme-empty') as HTMLElement;
+  const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>('.card'));
+
+  getHeroMap().then((hero) => {
+    let shown = 0;
+    cards.forEach((card) => {
+      const world = card.dataset.world as WorldKey;
+      const asset = hero[world];
+      if (!asset) return; // no real photo for this look yet — leave it hidden
+      card.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+      card.hidden = false;
+      shown++;
+    });
+    emptyMsg.hidden = shown > 0;
+  });
+</script>
+
 <style>
   h1 {
     font-size: var(--t-display-size);
@@ -91,6 +112,11 @@ const faqJsonLd = {
     font-size: var(--t-lead-size);
     color: var(--ink-soft);
     max-width: var(--measure);
+    margin: 0 0 2.5rem;
+  }
+  .empty {
+    font-size: var(--t-lead-size);
+    color: var(--ink-faint);
     margin: 0 0 2.5rem;
   }
   .grid {
@@ -119,18 +145,6 @@ const faqJsonLd = {
       transparent 62%,
       rgba(0, 0, 0, 0.28)
     );
-  }
-  .card__line {
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    top: 52%;
-    z-index: 1;
-    text-align: center;
-    font-size: 1.1rem;
-    line-height: 1.2;
-    font-weight: 600;
-    text-wrap: balance;
   }
   .card__name {
     position: absolute;

@@ -244,6 +244,16 @@ says "wallpapers" / "looks", never "world".
 
 ## History
 
+- **2026-09-11** — `/gallery` reworked to show every real uploaded photo, not
+  just one hero pick per category: now built from `GET /api/wallpapers?feed=1`
+  (same feed `Reel.astro` uses) instead of `?hero=1`. Page renders one
+  `<section id={w.slug}>` per world (preserving `SiteHeader`'s `/gallery#slug`
+  deep links) and, client-side, fills each section's grid with every photo
+  tagged under that world — a photo tagged under multiple worlds appears in
+  each. Sections/tiles are built from a `<template>` since photo counts
+  aren't known at build time; a category with no upload stays hidden, and the
+  page-level empty state only shows if nothing has been uploaded anywhere.
+
 - **2026-09-11** — Telegram visitor-session notifier: `src/lib/telegram.ts`
   (`notifyTelegram`, server-only, no-ops if `TELEGRAM_BOT_TOKEN`/
   `TELEGRAM_CHAT_ID` unset) + `POST /api/analytics/session-end`

@@ -1,42 +1,97 @@
 ---
 /**
- * /gallery — SKELETON. Browse the six worlds (brand bible Queue #2). Real
- * wallpaper entries (images, per-item copy, export sizes) come later as a
- * content collection; for now this lists the worlds from src/data/worlds.ts.
+ * /gallery — every real uploaded photo, grouped by category (brand bible
+ * Queue #2). Built entirely from `GET /api/wallpapers?feed=1` — the same
+ * feed the Reel uses — so each category section shows every real photo filed
+ * under it, not just one hero pick. Sections are built client-side from a
+ * `<template>` since photo counts aren't known at build time. A category
+ * with no upload yet renders no section at all (its `#slug` anchor from
+ * SiteHeader's nav just lands on an empty spot); if nothing has been
+ * uploaded anywhere, the empty state below shows instead.
  */
 import ChromeLayout from '../layouts/ChromeLayout.astro';
-import SkeletonNote from '../components/SkeletonNote.astro';
 import LockScreen from '../components/LockScreen.astro';
 import { WORLDS } from '../data/worlds';
+
+// structural chrome only (clock, dynamic island, share/preview icons, home
+// indicator) — same generic template Reel.astro uses; white chrome reads on
+// any real photo thanks to the .tile__art scrim below.
+const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
 ---
 
 <ChromeLayout
   title="Gallery — browse the wallpapers — motivationalwallpaper.com"
-  description="Six looks. Find the one that feels like who you are becoming."
+  description="Every real wallpaper people have shared, by category."
   narrow={false}
   noindex
 >
-  <SkeletonNote source="brand bible Queue #2" />
-
   <h1>Browse the wallpapers</h1>
-  <p class="lead">Six looks. Pick the one that fits.</p>
+  <p class="lead">Every real wallpaper people have shared. Tap one to save it.</p>
 
-  <div class="grid">
+  <p class="empty" id="gallery-empty" hidden>No wallpapers yet — check back soon.</p>
+
+  <div id="gallery-sections">
     {
       WORLDS.map((w) => (
-        <article class="tile" id={w.slug}>
-          <div class="tile__art" style={`--art:${w.art};`}>
-            <LockScreen world={w} brandTag={false} />
-          </div>
-          <div class="tile__foot">
-            <span class="tile__name">{w.name}</span>
-            <span class="tile__persona">{w.persona}</span>
-          </div>
-        </article>
+        <section class="category" id={w.slug} data-world={w.key} hidden>
+          <h2 class="category__name">{w.name}</h2>
+          <div class="grid" />
+        </section>
       ))
     }
   </div>
+
+  <template id="gallery-tile-template">
+    <a class="tile" href="/">
+      <div class="tile__art">
+        <LockScreen world={TEMPLATE_WORLD} brandTag={false} />
+      </div>
+    </a>
+  </template>
 </ChromeLayout>
+
+<script>
+  import type { WorldKey } from '../data/worlds';
+
+  interface FeedAsset {
+    id: string;
+    thumbUrl: string;
+    originalUrl: string;
+    worlds: WorldKey[];
+  }
+
+  const emptyMsg = document.getElementById('gallery-empty') as HTMLElement;
+  const template = document.getElementById('gallery-tile-template') as HTMLTemplateElement;
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('.category'));
+
+  function tileFor(asset: FeedAsset): HTMLElement {
+    const frag = template.content.cloneNode(true) as DocumentFragment;
+    const tile = frag.querySelector('.tile') as HTMLAnchorElement;
+    const art = tile.querySelector('.tile__art') as HTMLElement;
+    art.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+    return tile;
+  }
+
+  fetch('/api/wallpapers?feed=1')
+    .then((res) => (res.ok ? res.json() : { items: [] }))
+    .then((data: { items?: FeedAsset[] }) => {
+      const items = data.items ?? [];
+      let anyShown = false;
+      sections.forEach((section) => {
+        const world = section.dataset.world as WorldKey;
+        const matches = items.filter((a) => a.worlds.includes(world));
+        if (!matches.length) return; // no real photo for this category yet — leave it hidden
+        const grid = section.querySelector('.grid') as HTMLElement;
+        grid.append(...matches.map(tileFor));
+        section.hidden = false;
+        anyShown = true;
+      });
+      emptyMsg.hidden = anyShown;
+    })
+    .catch(() => {
+      emptyMsg.hidden = false;
+    });
+</script>
 
 <style>
   h1 {
@@ -50,12 +105,28 @@ import { WORLDS } from '../data/worlds';
     color: var(--ink-soft);
     margin: 0 0 2rem;
   }
+  .empty {
+    font-size: var(--t-lead-size);
+    color: var(--ink-faint);
+    margin: 0 0 2rem;
+  }
+  .category {
+    margin: 0 0 2.5rem;
+    scroll-margin-top: 24px;
+  }
+  .category__name {
+    font-size: var(--t-title2-size);
+    font-weight: var(--t-title2-weight);
+    letter-spacing: var(--t-title2-track);
+    margin: 0 0 0.9rem;
+  }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 20px;
   }
   .tile {
+    display: block;
     border: 1px solid var(--hairline);
     border-radius: var(--r-m);
     overflow: hidden;
@@ -65,19 +136,5 @@ import { WORLDS } from '../data/worlds';
     position: relative;
     aspect-ratio: 9 / 16;
     background: var(--art);
-  }
-  .tile__foot {
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  .tile__name {
-    font-weight: 600;
-    font-size: 0.9375rem;
-  }
-  .tile__persona {
-    font-size: 0.75rem;
-    color: var(--ink-faint);
   }
 </style>
