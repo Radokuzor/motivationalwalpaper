@@ -3,6 +3,7 @@ title: "Morning Routine Ideas to Start Your Day With Purpose"
 description: "You don't need a 5am ice bath. A realistic, science-backed morning routine that actually fits a normal life — and why the first hour matters so much."
 publishDate: 2026-02-23
 category: "Mindset"
+relatedWorld: "aesthetic"
 faqs:
   - q: "What is the ideal morning routine?"
     a: "There isn't one universal routine — the ideal version fits your actual schedule and energy, not a template built for someone with different constraints. What consistently helps across most versions is: some natural light early, avoiding your phone for the first stretch, and one small deliberate action before the day starts reacting for you."

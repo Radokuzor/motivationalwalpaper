@@ -1,0 +1,67 @@
+---
+/**
+ * /wallpapers/aesthetic — SEO landing page for the Aesthetic category.
+ * Chrome page (ChromeLayout), fully indexable, links through to the real
+ * photos at /gallery#aesthetic.
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="Aesthetic Quote Wallpapers for iPhone | motivationalwallpaper.com"
+  description="Soft, dreamy aesthetic wallpapers with gentle quotes for an easy, cozy lock screen"
+>
+  <h1>Aesthetic Quote Wallpapers for iPhone</h1>
+  <p class="lead">
+    A soft lock screen for the days you just want things to feel easy.
+  </p>
+
+  <p>
+    Not every wallpaper needs to push you toward a goal — sometimes the
+    nicest thing your phone can do is just feel calm to look at. This
+    aesthetic category leans into lilac, mint, and petal-pink gradients
+    paired with light, rounded type and gentle one-line quotes, the kind of
+    lock screen that matches a cozy, unbothered mood rather than a
+    motivational one. It's the category for a slow morning, a study
+    session, or just wanting your phone to look like the version of your
+    life you're curating.
+  </p>
+  <p>
+    These wallpapers are popular for exactly what they are: pretty, easy on
+    the eyes, and low-pressure. There's no discipline angle or grind
+    energy here — just a soft, dreamy backdrop and a short line that says
+    today gets to be gentle. If your other lock screens have been serious
+    lately, this category is the palate cleanser: something that looks good
+    in a screenshot and feels good every time you glance at it.
+  </p>
+
+  <p class="cta">
+    <a href="/gallery#aesthetic">Browse the Aesthetic wallpapers &rarr;</a>
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .cta {
+    margin-top: 1.5rem;
+  }
+  .cta a {
+    font-weight: 600;
+  }
+</style>

@@ -1,0 +1,67 @@
+---
+/**
+ * /wallpapers/healing — SEO landing page for the Healing / rebuild category.
+ * Chrome page (ChromeLayout), fully indexable, links through to the real
+ * photos at /gallery#rebuild (world key `rebuild`).
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="Healing & Recovery Motivational Wallpapers | motivationalwallpaper.com"
+  description="Gentle strength wallpapers for rebuilding after a hard season, one day at a time"
+>
+  <h1>Healing & Recovery Motivational Wallpapers</h1>
+  <p class="lead">
+    A quiet reminder, for whatever you're rebuilding from.
+  </p>
+
+  <p>
+    Healing rarely looks dramatic from the outside — it's mostly just
+    getting through an ordinary day while carrying something heavy, and
+    doing it again the next day. These healing wallpapers are built for
+    that kind of quiet strength: sage and clay tones with a soft, italic
+    line that simply says you are still here. No pressure to have it
+    figured out, no timeline attached — just an acknowledgment, waiting on
+    your lock screen, that showing up today counts.
+  </p>
+  <p>
+    This category is for anyone rebuilding after loss, a breakup, burnout,
+    illness, or a season that knocked them down harder than they expected.
+    It's not about forcing positivity onto a hard moment — it's a gentle,
+    repeated cue that recovery is happening even on the days it doesn't feel
+    like it, and that being carried through something doesn't make you any
+    less strong. A small reminder, seen every time you check your phone,
+    that you're still standing and that's enough for today.
+  </p>
+
+  <p class="cta">
+    <a href="/gallery#rebuild">Browse the Healing wallpapers &rarr;</a>
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .cta {
+    margin-top: 1.5rem;
+  }
+  .cta a {
+    font-weight: 600;
+  }
+</style>

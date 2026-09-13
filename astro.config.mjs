@@ -37,7 +37,7 @@ export default defineConfig({
       // real content and drops `noindex`, drop its prefix here too.
       filter: (page) => {
         const path = page.replace(SITE, '') || '/';
-        const NOINDEX_PREFIXES = ['/home', '/gallery', '/quiz', '/submit', '/iphone-wallpapers', '/api'];
+        const NOINDEX_PREFIXES = ['/home', '/quiz', '/submit', '/iphone-wallpapers', '/api'];
         if (path === '/404') return false;
         return !NOINDEX_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
       },

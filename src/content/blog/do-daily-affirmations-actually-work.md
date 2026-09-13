@@ -3,6 +3,7 @@ title: "Do Daily Affirmations Actually Work? What the Research Says"
 description: "Affirmations get mocked as wishful thinking. Here's what the actual psychology says about when they help, when they backfire, and how to do them right."
 publishDate: 2026-02-16
 category: "Mindset"
+relatedWorld: "soft"
 faqs:
   - q: "Do affirmations actually work, scientifically?"
     a: "Research on self-affirmation theory (Claude Steele, 1988, and a substantial body of work since) shows affirmations can reduce stress, improve problem-solving under pressure, and help people stay open to difficult feedback — but mainly when they reflect real, specific values rather than generic wishful statements repeated by rote."

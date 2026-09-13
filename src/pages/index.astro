@@ -57,11 +57,21 @@ const jsonLd = {
     <CategoryGrid />
     <CaptureSheet />
   </div>
+
+  <section class="seo-blurb" aria-label="About motivationalwallpaper.com">
+    <p>
+      Free motivational wallpapers and inspirational quote backgrounds for
+      iPhone and Android. Browse categories including gym motivation,
+      self-love, faith, entrepreneurship, aesthetic, healing, and anime.
+      Download your lock screen wallpaper instantly — no account required.
+    </p>
+  </section>
 </BaseLayout>
 
 <style>
   :global(body.screen-one) {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .app {
@@ -84,6 +94,18 @@ const jsonLd = {
       flex: 0 0 50%;
       width: 50%;
     }
+  }
+
+  .seo-blurb {
+    padding: 28px 24px 40px;
+    text-align: center;
+  }
+  .seo-blurb p {
+    max-width: 640px;
+    margin: 0 auto;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--ink-faint);
   }
 </style>
 

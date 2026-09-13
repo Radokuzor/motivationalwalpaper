@@ -8,6 +8,17 @@ import ChromeLayout from '../../layouts/ChromeLayout.astro';
 import { getCollection, render } from 'astro:content';
 import { worldByKey, type WorldKey } from '../../data/worlds';
 
+// World key -> /wallpapers/<slug> SEO landing page (see BUILD_LOG.md "SEO &
+// blog"). Distinct from `World.slug`, which is the /gallery#<slug> anchor.
+const WALLPAPER_PAGE: Partial<Record<WorldKey, string>> = {
+  stoic: 'gym',
+  scripture: 'faith',
+  soft: 'self-love',
+  builder: 'entrepreneurship',
+  aesthetic: 'aesthetic',
+  rebuild: 'healing',
+};
+
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
   return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
@@ -18,6 +29,11 @@ const { Content } = await render(post);
 const { title, description, publishDate, updatedDate, category, relatedWorld, faqs } = post.data;
 
 const world = relatedWorld ? worldByKey(relatedWorld as WorldKey) : undefined;
+const wallpaperPageHref = world
+  ? WALLPAPER_PAGE[world.key]
+    ? `/wallpapers/${WALLPAPER_PAGE[world.key]}`
+    : `/gallery#${world.slug}`
+  : undefined;
 const canonical = new URL(`/blog/${post.id}`, Astro.site).href;
 
 const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -94,7 +110,7 @@ const faqJsonLd = faqs?.length
         {world ? (
           <>
             Want a daily reminder like this on your lock screen? Browse the
-            <a href={`/gallery#${world.slug}`}> {world.name} wallpapers</a>.
+            <a href={wallpaperPageHref}> {world.name} wallpapers</a>.
           </>
         ) : (
           <>

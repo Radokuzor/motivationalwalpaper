@@ -1,0 +1,67 @@
+---
+/**
+ * /wallpapers/faith — SEO landing page for the Faith / scripture category.
+ * Chrome page (ChromeLayout), fully indexable, links through to the real
+ * photos at /gallery#scripture.
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="Christian & Faith Wallpapers for iPhone | motivationalwallpaper.com"
+  description="Bible verse and scripture phone backgrounds"
+>
+  <h1>Christian & Faith Wallpapers for iPhone</h1>
+  <p class="lead">
+    Scripture and steadying words, right where you'll actually see them.
+  </p>
+
+  <p>
+    A lock screen is one of the most-seen surfaces on your phone — most
+    people unlock it dozens of times a day, often without thinking. These
+    faith wallpapers put scripture and short, steadying words in that same
+    spot, so a moment that's usually reflexive becomes a small point of
+    stillness instead. There's no need to remember to open an app or set a
+    reminder; the verse is simply there, waiting, the next time you check
+    the time or a notification.
+  </p>
+  <p>
+    The category draws on deep navy and parchment tones with a quiet serif
+    voice, built around a single steadying idea: be still, you are carried,
+    you don't have to hold everything yourself today. It's meant for anyone
+    who wants their faith to stay close during an ordinary Tuesday, not just
+    during church on Sunday — a phone background that meets you in traffic,
+    at your desk, or in a hard season, and reminds you who's holding it all
+    together.
+  </p>
+
+  <p class="cta">
+    <a href="/gallery#scripture">Browse the Faith wallpapers &rarr;</a>
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .cta {
+    margin-top: 1.5rem;
+  }
+  .cta a {
+    font-weight: 600;
+  }
+</style>

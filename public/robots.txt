@@ -1,6 +1,9 @@
 User-agent: *
 Allow: /
-Disallow: /submit
 Disallow: /api/
+Disallow: /submit
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /home
 
 Sitemap: https://motivationalwallpaper.com/sitemap-index.xml

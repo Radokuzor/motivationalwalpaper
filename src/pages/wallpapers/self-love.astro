@@ -1,0 +1,67 @@
+---
+/**
+ * /wallpapers/self-love — SEO landing page for the Self Love category.
+ * Chrome page (ChromeLayout), fully indexable, links through to the real
+ * photos at /gallery#soft-life (world key `soft`, slug `soft-life`).
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="Self-Love & Affirmation Wallpapers | motivationalwallpaper.com"
+  description="Gentle affirmation wallpapers to help you be kinder to yourself, one lock screen at a time"
+>
+  <h1>Self-Love & Affirmation Wallpapers</h1>
+  <p class="lead">
+    A gentler voice to greet you every time you check your phone.
+  </p>
+
+  <p>
+    Most of us are harder on ourselves than we'd ever be on a friend, and
+    that inner voice tends to get loudest exactly when we're already
+    struggling. These self-love wallpapers are built to interrupt that
+    pattern in a small, low-effort way — soft blush and cream tones paired
+    with a gentle affirmation, sitting on the one screen you look at more
+    than any other. You don't have to journal or meditate to benefit; you
+    just have to unlock your phone the way you already do.
+  </p>
+  <p>
+    The words lean toward permission rather than pressure — you're allowed
+    to begin again, you're allowed to take up space, you're allowed to be a
+    work in progress. It's a category for anyone rebuilding their
+    relationship with themselves after a hard year, a breakup, a season of
+    burnout, or just quietly deciding they're done speaking to themselves
+    unkindly. Small, repeated moments of gentleness add up — this is one
+    of the easiest ones to build in.
+  </p>
+
+  <p class="cta">
+    <a href="/gallery#soft-life">Browse the Self Love wallpapers &rarr;</a>
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .cta {
+    margin-top: 1.5rem;
+  }
+  .cta a {
+    font-weight: 600;
+  }
+</style>

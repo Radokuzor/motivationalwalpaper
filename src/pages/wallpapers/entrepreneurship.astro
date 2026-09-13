@@ -1,0 +1,67 @@
+---
+/**
+ * /wallpapers/entrepreneurship — SEO landing page for the Entrepreneurship
+ * category. Chrome page (ChromeLayout), fully indexable, links through to
+ * the real photos at /gallery#builder (world key `builder`).
+ */
+import ChromeLayout from '../../layouts/ChromeLayout.astro';
+---
+
+<ChromeLayout
+  title="Entrepreneur & Business Motivation Wallpapers | motivationalwallpaper.com"
+  description="Momentum-focused wallpapers for building a business in the quiet, unseen hours"
+>
+  <h1>Entrepreneur & Business Motivation Wallpapers</h1>
+  <p class="lead">
+    Built for the stretch where no one's watching and nothing's proven yet.
+  </p>
+
+  <p>
+    Building something from nothing is mostly quiet work — invoices,
+    follow-ups, and small decisions with no one around to clap. These
+    entrepreneurship wallpapers are built for that stretch, before the
+    traction or the proof, when the only thing keeping the momentum going is
+    you showing up again the next day. Dark, minimal backdrops with a
+    single line of gold keep the focus on execution instead of hype: build
+    it in the quiet, and let the results speak later.
+  </p>
+  <p>
+    Whether you're bootstrapping a first product, freelancing your way to
+    something bigger, or grinding through the unglamorous middle of a
+    business no one else can see the potential in yet, this category is a
+    daily nudge to keep moving. It's not about chasing a feeling of
+    inspiration — it's a lock screen that reflects back the identity you're
+    building toward: someone who executes, in silence, one ordinary day at
+    a time, until the work becomes obvious to everyone else too.
+  </p>
+
+  <p class="cta">
+    <a href="/gallery#builder">Browse the Entrepreneurship wallpapers &rarr;</a>
+  </p>
+</ChromeLayout>
+
+<style>
+  h1 {
+    font-size: var(--t-title1-size);
+    font-weight: var(--t-title1-weight);
+    letter-spacing: var(--t-title1-track);
+    margin: 0 0 0.6rem;
+  }
+  .lead {
+    font-size: var(--t-lead-size);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 1.5rem;
+  }
+  p {
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .cta {
+    margin-top: 1.5rem;
+  }
+  .cta a {
+    font-weight: 600;
+  }
+</style>
