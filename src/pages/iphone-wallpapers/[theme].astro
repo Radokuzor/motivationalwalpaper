@@ -54,7 +54,7 @@ const faqJsonLd = {
 
   <p class="empty" id="theme-empty" hidden>No wallpapers yet for this look — check back soon.</p>
 
-  <div class="grid" id="theme-grid">
+  <div class="grid" id="theme-grid" role="status">
     {
       worlds.map((w) => (
         <a class="card" href="/" data-world={w.key} hidden>
@@ -62,6 +62,10 @@ const faqJsonLd = {
         </a>
       ))
     }
+    {
+      worlds.map(() => <div class="card-skel mw-skel" aria-hidden="true" />)
+    }
+    <span class="sr-only">Loading wallpapers…</span>
   </div>
 
   <section class="faq">
@@ -86,6 +90,8 @@ const faqJsonLd = {
   const cards = Array.from(grid.querySelectorAll<HTMLAnchorElement>('.card'));
 
   getHeroMap().then((hero) => {
+    grid.querySelectorAll('.card-skel').forEach((el) => el.remove());
+    grid.removeAttribute('role');
     let shown = 0;
     cards.forEach((card) => {
       const world = card.dataset.world as WorldKey;
@@ -145,6 +151,10 @@ const faqJsonLd = {
       transparent 62%,
       rgba(0, 0, 0, 0.28)
     );
+  }
+  .card-skel {
+    aspect-ratio: 9 / 16;
+    border-radius: var(--r-m);
   }
   .card__name {
     position: absolute;

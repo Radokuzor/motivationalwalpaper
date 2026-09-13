@@ -36,6 +36,12 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     <p class="reel-empty" id="reel-empty" hidden>No wallpapers yet — check back soon.</p>
   </div>
 
+  <div class="reel-loading" id="reel-loading" role="status">
+    <div class="mw-skel reel-loading__art" aria-hidden="true"></div>
+    <div class="mw-spinner reel-loading__spinner" aria-hidden="true"></div>
+    <span class="sr-only">Loading wallpapers…</span>
+  </div>
+
   <template id="reel-panel-template">
     <article class="panel">
       <div class="wall"></div>
@@ -44,7 +50,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   </template>
 
   <div class="chevron" aria-hidden="true"><b>Swipe down</b><i></i><i></i><i></i></div>
-  <button class="cta" id="reel-cta" type="button">Download</button>
+  <button class="cta" id="reel-cta" type="button" hidden>Download</button>
   <div class="reel-dots" id="reel-dots" role="presentation"></div>
   <div class="reel-preview" id="reel-preview" aria-hidden="true">
     <div class="preview-wall"></div>
@@ -85,6 +91,25 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     color: var(--ink-soft);
     font-family: var(--font-sans);
     font-size: 15px;
+  }
+
+  .reel-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+  }
+  .reel-loading__art {
+    position: absolute;
+    inset: 0;
+  }
+  .reel-loading__spinner {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+    color: var(--ink-faint);
   }
 
   .panel {
@@ -324,6 +349,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     const preview = document.getElementById('reel-preview') as HTMLElement;
     const cta = document.getElementById('reel-cta') as HTMLButtonElement;
     const emptyMsg = document.getElementById('reel-empty') as HTMLElement;
+    const loading = document.getElementById('reel-loading') as HTMLElement;
     const template = document.getElementById('reel-panel-template') as HTMLTemplateElement;
     const prefersReduced = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -379,6 +405,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     }
 
     function build(items: FeedAsset[]) {
+      loading.hidden = true;
       assets = items;
       reel!.querySelectorAll('.panel').forEach((p) => p.remove());
       dotsWrap.textContent = '';

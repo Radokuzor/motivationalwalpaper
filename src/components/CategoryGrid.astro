@@ -2,7 +2,8 @@
 /**
  * CategoryGrid — the slide-up wallpaper grid for one world (Instagram-style).
  *
- * Opened by CategoryRail (mobile/tablet) or a ThemeGrid card (desktop). Opens
+ * Opened by a ThemeGrid card (desktop only — mobile links straight to the
+ * gallery page instead). Opens
  * showing the world's real uploaded photos — no placeholder/quote tiles.
  * Photo lists are fetched through `scripts/categoryPhotos`, which every
  * category is quietly prefetched into on init, so opening one is usually
@@ -161,6 +162,9 @@ import SiteHeader from './SiteHeader.astro';
     outline: 2px solid #fff;
     outline-offset: -3px;
   }
+  .grid-strip :global(.grid-tile-skel) {
+    aspect-ratio: 1;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .grid-view,
@@ -215,6 +219,13 @@ import SiteHeader from './SiteHeader.astro';
       }
     }
 
+    function skeletonTile(): HTMLElement {
+      const tile = document.createElement('div');
+      tile.className = 'grid-tile-skel mw-skel';
+      tile.setAttribute('aria-hidden', 'true');
+      return tile;
+    }
+
     function photoTile(w: ReturnType<typeof worldByKey>, key: WorldKey, item: PublicAsset, i: number) {
       const tile = document.createElement('button');
       tile.type = 'button';
@@ -240,6 +251,8 @@ import SiteHeader from './SiteHeader.astro';
       if (!w) return;
 
       strip!.textContent = '';
+      strip!.setAttribute('aria-busy', 'true');
+      for (let i = 0; i < 9; i++) strip!.appendChild(skeletonTile());
       nameEl!.textContent = w.name;
       countEl!.textContent = 'Loading…';
       view!.dataset.world = key;
@@ -257,6 +270,7 @@ import SiteHeader from './SiteHeader.astro';
       getCategoryPhotos(key).then((items) => {
         if (view!.dataset.world !== key) return;
         strip!.textContent = '';
+        strip!.removeAttribute('aria-busy');
         items.forEach((item, i) => strip!.appendChild(photoTile(w, key, item, i)));
         countEl!.textContent = items.length
           ? `${items.length} wallpaper${items.length === 1 ? '' : 's'}`

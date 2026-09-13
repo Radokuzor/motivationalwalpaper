@@ -79,6 +79,51 @@ a:hover {
   display: none !important;
 }
 
+/* ---- async loading states — shared by every wallpaper fetch (reel, grids,
+   gallery, theme pages) and the download button, so a slow network shows a
+   moving placeholder instead of blank space that reads as broken. ---- */
+@keyframes mw-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.mw-skel {
+  background: linear-gradient(
+    100deg,
+    var(--surface-2) 40%,
+    var(--hairline-strong) 50%,
+    var(--surface-2) 60%
+  );
+  background-size: 300% 100%;
+  animation: mw-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes mw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.mw-spinner {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.75;
+  animation: mw-spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-skel {
+    animation: none;
+    background: var(--surface-2);
+  }
+}
+
 /* Motion is navigation, not decoration (§09). There is deliberately NO blanket
    animation kill here — the capture sheet still wants its 120ms fade under
    reduced motion, and snap scrolling stays. Each component handles its own

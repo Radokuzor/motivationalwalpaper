@@ -17,6 +17,11 @@ import Quiz from './Quiz.astro';
 
 <div class="backdrop" id="mw-backdrop" hidden></div>
 
+<div class="dl-toast" id="mw-dl-toast" role="status" aria-live="polite" hidden>
+  <span class="mw-spinner" aria-hidden="true"></span>
+  Downloading your wallpaper…
+</div>
+
 <div
   class="sheet"
   id="mw-sheet"
@@ -99,6 +104,33 @@ import Quiz from './Quiz.astro';
   }
   .backdrop.show {
     opacity: 1;
+  }
+
+  .dl-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--r-pill);
+    background: rgba(0, 0, 0, 0.72);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  }
+  .dl-toast .mw-spinner {
+    color: #fff;
   }
 
   .sheet {
@@ -461,9 +493,17 @@ import Quiz from './Quiz.astro';
       // hand over the wallpaper they're looking at — non-blocking, and the flow
       // proceeds whether or not the download starts. Every wallpaper on the
       // site is a real photo now, so `currentAsset` should always be set;
-      // this is just a defensive no-op if it somehow isn't.
+      // this is just a defensive no-op if it somehow isn't. The toast just
+      // says the fetch is under way — no real download can look instant on a
+      // multi-MB original, so silence here would read as broken.
       if (currentAsset) {
-        void downloadOriginal(currentAsset.originalUrl, `motivationalwallpaper-${currentWorld}`);
+        const toast = document.getElementById('mw-dl-toast');
+        if (toast) toast.hidden = false;
+        void downloadOriginal(currentAsset.originalUrl, `motivationalwallpaper-${currentWorld}`).finally(
+          () => {
+            if (toast) toast.hidden = true;
+          },
+        );
         trackAction('Downloaded wallpaper');
       }
       if (v) {

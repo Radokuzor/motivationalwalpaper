@@ -1,32 +1,17 @@
 ---
 /**
- * CategoryRail — Screen One's floating category menu (mobile / tablet only).
+ * CategoryRail — Screen One's floating "Browse all" link (mobile / tablet only).
  *
- * A vertical stack of glass pills flush to the right edge, one per world. Same
- * dark-glass treatment as the pinned CTA so it whispers. Hidden >=900px, where
- * ThemeGrid's "All wallpapers" grid already fills the right half.
- *
- *  - emits  mw:category-open  { world }   (CategoryGrid opens the grid)
- *  - listens mw:reel-world                (mark the on-screen world as current)
+ * A single glass pill flush to the right edge that opens the full gallery
+ * page. Same dark-glass treatment as the pinned CTA so it whispers. Hidden
+ * >=900px, where ThemeGrid's "All wallpapers" grid already fills the right
+ * half.
  */
-import { WORLDS } from '../data/worlds';
 ---
 
-<nav class="cat-rail" aria-label="Wallpaper categories">
-  {
-    WORLDS.map((w) => (
-      <button
-        class="cat-btn"
-        type="button"
-        data-world={w.key}
-        style={`--art:${w.art};`}
-      >
-        <i aria-hidden="true" />
-        {w.name}
-      </button>
-    ))
-  }
-</nav>
+<a class="cat-rail" href="/gallery" aria-label="Browse all wallpaper categories">
+  Browse all
+</a>
 
 <style>
   .cat-rail {
@@ -36,15 +21,7 @@ import { WORLDS } from '../data/worlds';
     transform: translateY(-50%);
     z-index: 40;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
-  }
-
-  .cat-btn {
-    display: flex;
     align-items: center;
-    gap: 8px;
     height: 32px;
     padding: 0 13px;
     border: 1px solid rgba(255, 255, 255, 0.26);
@@ -61,25 +38,14 @@ import { WORLDS } from '../data/worlds';
     text-transform: uppercase;
     white-space: nowrap;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    text-decoration: none;
     cursor: pointer;
     transition: background 0.16s ease;
   }
-  .cat-btn i {
-    width: 12px;
-    height: 12px;
-    border-radius: 4px;
-    flex: none;
-    background: var(--art);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-  }
-  .cat-btn:active {
+  .cat-rail:active {
     background: rgba(0, 0, 0, 0.44);
   }
-  .cat-btn.is-current {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.6);
-  }
-  .cat-btn:focus-visible {
+  .cat-rail:focus-visible {
     outline: 2px solid #fff;
     outline-offset: 2px;
   }
@@ -98,30 +64,3 @@ import { WORLDS } from '../data/worlds';
     }
   }
 </style>
-
-<script>
-  import { MW, emit, on } from '../scripts/events';
-  import type { WorldKey } from '../data/worlds';
-
-  function init() {
-    const rail = document.querySelector('.cat-rail');
-    if (!rail) return;
-    const btns = Array.from(
-      rail.querySelectorAll<HTMLButtonElement>('.cat-btn'),
-    );
-
-    btns.forEach((btn) => {
-      const world = btn.dataset.world as WorldKey | undefined;
-      if (!world) return;
-      btn.addEventListener('click', () => emit(MW.categoryOpen, { world }));
-    });
-
-    on(MW.reelWorld, (d) => {
-      btns.forEach((b) =>
-        b.classList.toggle('is-current', b.dataset.world === d.world),
-      );
-    });
-  }
-
-  init();
-</script>

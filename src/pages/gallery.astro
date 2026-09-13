@@ -24,10 +24,18 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   description="Every real wallpaper people have shared, by category."
   narrow={false}
 >
-  <h1>Browse the wallpapers</h1>
-  <p class="lead">Every real wallpaper people have shared. Tap one to save it.</p>
+  <h1>Gallery</h1>
 
   <p class="empty" id="gallery-empty" hidden>No wallpapers yet — check back soon.</p>
+
+  <div class="grid" id="gallery-loading" role="status">
+    {
+      Array.from({ length: 9 }).map(() => (
+        <div class="skel-tile mw-skel" aria-hidden="true" />
+      ))
+    }
+    <span class="sr-only">Loading wallpapers…</span>
+  </div>
 
   <div id="gallery-sections">
     {
@@ -60,6 +68,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   }
 
   const emptyMsg = document.getElementById('gallery-empty') as HTMLElement;
+  const loading = document.getElementById('gallery-loading') as HTMLElement;
   const template = document.getElementById('gallery-tile-template') as HTMLTemplateElement;
   const sections = Array.from(document.querySelectorAll<HTMLElement>('.category'));
 
@@ -74,6 +83,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   fetch('/api/wallpapers?feed=1')
     .then((res) => (res.ok ? res.json() : { items: [] }))
     .then((data: { items?: FeedAsset[] }) => {
+      loading.hidden = true;
       const items = data.items ?? [];
       let anyShown = false;
       sections.forEach((section) => {
@@ -88,6 +98,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
       emptyMsg.hidden = anyShown;
     })
     .catch(() => {
+      loading.hidden = true;
       emptyMsg.hidden = false;
     });
 </script>
@@ -135,5 +146,33 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
     position: relative;
     aspect-ratio: 9 / 16;
     background: var(--art);
+  }
+  .skel-tile {
+    aspect-ratio: 9 / 16;
+    border-radius: var(--r-m);
+  }
+
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+    .tile {
+      border: none;
+      border-radius: 0;
+    }
+    .tile__art {
+      aspect-ratio: 1 / 1;
+    }
+    .skel-tile {
+      aspect-ratio: 1 / 1;
+      border-radius: 0;
+    }
+    /* Instagram-style grid on mobile: plain photo squares, no lock-screen
+       chrome (clock/island/actions) — that mockup only reads at the larger
+       phone-preview size the desktop grid uses. */
+    .tile__art :global(.lock) {
+      display: none;
+    }
   }
 </style>

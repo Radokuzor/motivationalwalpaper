@@ -17,7 +17,14 @@ import SiteHeader from './SiteHeader.astro';
   <SiteHeader />
   <p class="browse__label">All wallpapers</p>
   <p class="browse__empty" id="mw-browse-empty" hidden>No wallpapers yet — check back soon.</p>
-  <div class="photo-grid" id="mw-photo-grid"></div>
+  <div class="photo-grid" id="mw-photo-grid" role="status">
+    {
+      Array.from({ length: 9 }).map(() => (
+        <div class="skel-tile mw-skel" aria-hidden="true" />
+      ))
+    }
+    <span class="sr-only">Loading wallpapers…</span>
+  </div>
 </aside>
 
 <style>
@@ -64,6 +71,11 @@ import SiteHeader from './SiteHeader.astro';
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+  }
+
+  .skel-tile {
+    aspect-ratio: 9 / 16;
+    border-radius: var(--r-m);
   }
 
   .photo-grid :global(.photo-tile) {
@@ -135,11 +147,15 @@ import SiteHeader from './SiteHeader.astro';
     fetch('/api/wallpapers?feed=1')
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((data: { items?: FeedAsset[] }) => {
+        grid.textContent = ''; // clear the loading skeleton
+        grid.removeAttribute('role');
         const items = shuffle(data.items ?? []);
         grid.append(...items.map(tileFor));
         emptyMsg.hidden = items.length > 0;
       })
       .catch(() => {
+        grid.textContent = '';
+        grid.removeAttribute('role');
         emptyMsg.hidden = false;
       });
   }
