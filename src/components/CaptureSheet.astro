@@ -350,6 +350,17 @@ import Quiz from './Quiz.astro';
     return digits.length >= 7 && digits.length <= 15;
   };
 
+  // Minted here (not in Quiz.astro, which used to generate its own) so the
+  // download fired below can be stamped onto the same survey_responses row
+  // before that row even exists yet — /api/downloads creates/merges it.
+  function newResponseId(): string {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return `r-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  }
+
   function init() {
     const backdrop = document.getElementById('mw-backdrop');
     const sheet = document.getElementById('mw-sheet');
@@ -496,6 +507,8 @@ import Quiz from './Quiz.astro';
       // this is just a defensive no-op if it somehow isn't. The toast just
       // says the fetch is under way — no real download can look instant on a
       // multi-MB original, so silence here would read as broken.
+      const responseId = newResponseId();
+
       if (currentAsset) {
         const toast = document.getElementById('mw-dl-toast');
         if (toast) toast.hidden = false;
@@ -506,11 +519,12 @@ import Quiz from './Quiz.astro';
         );
         trackAction('Downloaded wallpaper');
         // Best-effort counter bump for the admin dashboard — never blocks the
-        // download or the rest of the flow.
+        // download or the rest of the flow. responseId links this download to
+        // the survey row Quiz.astro is about to create/upsert with the same id.
         void fetch('/api/downloads', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ assetId: currentAsset.id, world: currentWorld }),
+          body: JSON.stringify({ assetId: currentAsset.id, world: currentWorld, responseId }),
           keepalive: true,
         }).catch(() => {});
       }
@@ -523,6 +537,7 @@ import Quiz from './Quiz.astro';
         email: mode === 'email' ? v : '',
         phone: mode === 'phone' ? v : '',
         company: company.value,
+        responseId,
       });
     });
 

@@ -16,6 +16,7 @@ import {
   summarizeSurvey,
   fetchWorldStats,
   fetchTopAssets,
+  fetchAssetThumbs,
   PROFILE_KEYS,
 } from '../../lib/adminData';
 
@@ -27,6 +28,9 @@ const [rows, worldStats, topAssets] = await Promise.all([
   fetchWorldStats(),
   fetchTopAssets(20),
 ]);
+
+const downloadedIds = rows.flatMap((r) => r.downloadedAssets.map((a) => a.assetId).filter((id): id is string => !!id));
+const thumbs = await fetchAssetThumbs(downloadedIds);
 
 const summary = summarizeSurvey(rows);
 const totalDownloads = worldStats.reduce((sum, w) => sum + w.downloads, 0);
@@ -94,6 +98,12 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
     tr:last-child td { border-bottom: none; }
     .scroll { overflow-x: auto; }
     .thumb { width: 44px; height: 60px; object-fit: cover; border-radius: 6px; vertical-align: middle; }
+    .snippets { display: flex; gap: 4px; white-space: nowrap; }
+    .thumb-missing {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 60px; border-radius: 6px; background: var(--surface-2);
+      color: var(--ink-faint); font-size: 10px; text-align: center; padding: 2px;
+    }
     form.filters { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
     form.filters label { display: flex; flex-direction: column; font-size: var(--t-label-size); color: var(--ink-soft); gap: 4px; }
     select, button, .btn {
@@ -109,11 +119,25 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
     }
     button, .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     .empty { color: var(--ink-faint); padding: 16px; font-style: italic; }
+    nav.tabs { margin-bottom: 20px; }
+    nav.tabs a {
+      color: var(--ink-soft);
+      text-decoration: none;
+      font-size: var(--t-small-size);
+      margin-right: 16px;
+      padding-bottom: 2px;
+      border-bottom: 2px solid transparent;
+    }
+    nav.tabs a.active { color: var(--ink); border-color: var(--accent); font-weight: 600; }
   </style>
 </head>
 <body>
   <h1>motivationalwallpaper.com — admin</h1>
   <p class="sub">Internal, read-only. Not indexed.</p>
+  <nav class="tabs">
+    <a href="/admin" class="active">Survey &amp; downloads</a>
+    <a href="/admin/seo">SEO &amp; traffic</a>
+  </nav>
 
   <div class="cards">
     <div class="card"><div class="n">{summary.total}</div><div class="l">Survey rows (last {rows.length < 500 ? rows.length : '500+'})</div></div>
@@ -186,9 +210,9 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
       <table>
         <thead>
           <tr>
-            <th>Created</th><th>Status</th><th>Profile</th><th>World</th><th>Email</th>
+            <th>Created</th><th>Status</th><th>Profile</th><th>Category</th><th>Email</th>
             <th>Phone</th><th>Age</th><th>Gender</th><th>Life</th><th>Inspires</th>
-            <th>Email status</th><th>SMS status</th>
+            <th>Email status</th><th>SMS status</th><th>Downloaded</th>
           </tr>
         </thead>
         <tbody>
@@ -197,7 +221,7 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
               <td>{fmt(r.createdAt)}</td>
               <td>{r.status ?? '—'}</td>
               <td>{r.profile ?? '—'}</td>
-              <td>{r.world ?? '—'}</td>
+              <td>{r.worldName ?? '—'}</td>
               <td>{r.email ?? '—'}</td>
               <td>{r.phone ?? '—'}</td>
               <td>{r.age ?? '—'}</td>
@@ -206,6 +230,19 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
               <td>{r.inspires.join('; ') || '—'}</td>
               <td>{r.emailStatus ?? '—'}</td>
               <td>{r.smsStatus ?? '—'}</td>
+              <td>
+                {r.downloadedAssets.length === 0 ? '—' : (
+                  <span class="snippets">
+                    {r.downloadedAssets.map((a) => (
+                      a.assetId && thumbs.has(a.assetId) ? (
+                        <img class="thumb" src={thumbs.get(a.assetId)} alt={a.world} title={a.world} loading="lazy" />
+                      ) : (
+                        <span class="thumb-missing" title={a.world}>{a.world}</span>
+                      )
+                    ))}
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

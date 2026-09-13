@@ -320,14 +320,9 @@ import { QUIZ_COPY } from '../data/quiz';
 
     // Stable id for this response so every save (capture, each step, completion)
     // upserts the same Firestore row — an abandoned flow still leaves its data.
+    // Minted by CaptureSheet.astro (mw:capture-submit carries it) so it matches
+    // whatever /api/downloads already stamped the download onto.
     let responseId = '';
-    const newResponseId = () => {
-      try {
-        return crypto.randomUUID();
-      } catch {
-        return `r-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      }
-    };
 
     /* Progress save. Never blocks the UI, never surfaces errors; one silent
        retry. `status:'complete'` on the final call. Resolves to the parsed
@@ -585,7 +580,7 @@ import { QUIZ_COPY } from '../data/quiz';
       answers.company = detail.company || undefined;
       // start the response row now — captures contact even if the quiz is
       // abandoned before the first question.
-      responseId = newResponseId();
+      responseId = detail.responseId;
       saveProgress('partial');
       const h2 = head!.querySelector('h2');
       if (h2) {

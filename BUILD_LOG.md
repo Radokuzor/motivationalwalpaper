@@ -16,7 +16,7 @@ Companion briefs (self-contained, paste into a fresh chat to build):
 | Framework | **Astro 5.18**, `output: 'static'` — pages prerender, SSR routes opt out with `export const prerender = false` |
 | Host | **Vercel**, adapter `@astrojs/vercel` **v8** (`vercel()` from `@astrojs/vercel`) |
 | Node | `engines.node` `^20.3.0 \|\| >=22.0.0`; Vercel runs **nodejs22.x**; build locally on Node 20 (`PATH="$HOME/.local/node-v20/bin:$PATH"`) or 24 |
-| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collections `survey_responses`, `figure_quotes`, `wallpaper_assets`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
+| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collections `survey_responses`, `figure_quotes`, `wallpaper_assets`, `world_stats`, `download_events`, `page_stats`, `referrer_stats`, `entry_page_stats`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
 | Assets | **Firebase Cloud Storage** (`FIREBASE_STORAGE_BUCKET`), `wallpaper_assets/<id>/original.*` + `thumb.webp`. Written by `/submit` + `/api/wallpapers` via Admin SDK; browser reads use signed URLs. `storage.rules` deny-all. |
 | Other deps | `@astrojs/sitemap` 3.7.4 (unpinned for Astro 5), `@astrojs/check` 0.9.10, `@vercel/analytics` 2.0.1 |
 | Secrets | `.env` (gitignored) + Vercel env vars: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`. Service-account JSON is gitignored (`*firebase-adminsdk*.json`). |
@@ -112,7 +112,7 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
 | **Vercel Node version** | Set Project Settings → Node.js Version → 22.x (matches `engines.node`). |
 | **Custom domain** | `astro.config.mjs` hard-codes `site: 'https://motivationalwallpaper.com'` for canonical/sitemap. Attach the domain or update `site`. |
 | **`/home?profile=…` redirect** | Quiz completion dead-ends at "Welcome". `index.astro` listens for `mw:quiz-complete` but the redirect is a TODO (brief said leave it). |
-| **Admin page** | Spec'd in `admin-build-brief.md`, not built. `/admin` SSR + Basic Auth + table + CSV export over `survey_responses`. |
+| **Production `ADMIN_PASSWORD`** | Add `ADMIN_USER`/`ADMIN_PASSWORD` to Vercel env vars (all environments) and redeploy — `/admin` 500s until it's set. |
 | **Category display names** | Resolved 2026-09-10 — see History. Internal `WorldKey`/`profile` values unchanged; only the user-facing `name` changed. |
 | **`/gallery`** | Still the `noindex` skeleton — real per-category browsing (images, per-item copy) not built. Header "Categories" links point to `/gallery#<slug>` anchors, which exist now but the page itself is still a placeholder. |
 | **Storage bucket CORS** | **Done 2026-09-11.** `motivewallpaper-220e4`'s default bucket had no CORS config, which silently blocked `fetch()`-then-download of a real photo's original file (`downloadOriginal()` in `wallpaper.ts`). Set via a one-off script using the existing Admin SDK credentials (`bucket.setCorsConfiguration`) — `GET` allowed from `motivationalwallpaper.com`, `www.`, and `localhost:4321`. Verified against the real bucket + a real download. |
@@ -252,6 +252,132 @@ marcus, sarah, james, jerome, grace, diane). **Not user-facing** — public copy
 says "wallpapers" / "looks", never "world".
 
 ## History
+
+- **2026-09-13** — `/admin` survey table: "World" column now shows the
+  display category name (e.g. "Gym") instead of the internal key
+  (`stoic`) — `src/lib/adminData.ts`'s `SurveyRow` gained `worldName`
+  (via `worldByKey().name`), CSV export follows suit. Also added a
+  **Downloaded** column showing a thumbnail of whichever wallpaper(s) that
+  respondent actually downloaded at capture — previously there was no link
+  at all between a survey row and the specific photo shown when they hit
+  Download (only the quiz-routed `world` was stored, which reflects their
+  quiz answers, not necessarily what was on screen when they downloaded).
+  - The `responseId` that ties a browser session's capture/quiz/download
+    together used to be minted inside `Quiz.astro` *after* the download had
+    already fired, so `/api/downloads` had no id to attach the download to.
+    Moved id generation to `CaptureSheet.astro` (right before it fires the
+    download and `/api/downloads`), carried it through the existing
+    `mw:capture-submit` event (`CaptureSubmitDetail.responseId`,
+    `src/scripts/events.ts`) into `Quiz.astro`, which now reuses it instead
+    of minting its own.
+  - `src/pages/api/downloads.ts` accepts optional `responseId` (validated
+    with the same pattern `/api/survey` uses) and appends
+    `{assetId, world, at}` to `survey_responses/<responseId>.downloadedAssets`
+    via `arrayUnion`.
+  - **Bug caught in testing, fixed before shipping**: in the real flow
+    `/api/downloads` fires *before* `/api/survey`'s own upsert, so it's
+    often the call that brings the `survey_responses` doc into existence —
+    a plain `merge: true` would have created it without `createdAt`, and
+    `/admin`'s `orderBy('createdAt')` query silently excludes any doc
+    missing that field, so the row would never appear despite existing with
+    real data. Fixed by reading the doc first and stamping `createdAt` (and
+    `source: 'screen-one'`) exactly when this call is the one creating it —
+    same pattern `/api/survey` already uses for the same reason.
+  - `src/lib/adminData.ts` gained `fetchAssetThumbs()` — batch-resolves
+    signed thumbnail URLs for a set of asset ids via `db.getAll()` in one
+    round trip, avoiding an N+1 per survey row.
+  - Verified against the real `motivewallpaper-220e4` project: reproduced
+    the missing-`createdAt` bug with a synthetic responseId, confirmed the
+    fixed code stamps it correctly, and confirmed `/admin` renders both the
+    display category name and the downloaded-wallpaper thumbnail for a
+    linked row. All test writes (2 synthetic `survey_responses` docs, 4
+    curl-tagged `download_events` rows, and counter increments on
+    `wallpaper_assets`/`world_stats`/`page_stats`/`referrer_stats`/
+    `entry_page_stats` accumulated across this and the prior two testing
+    rounds) were reverted/deleted afterward — counters decremented by exactly
+    the known test contribution rather than reset, so any real concurrent
+    traffic on the same shared docs would have been unaffected.
+
+- **2026-09-13** — `/admin/seo` added: a second admin screen for traffic/SEO
+  data (traffic sources, entry pages, most-viewed pages, most-viewed
+  wallpapers, wallpapers with the most cumulative time-on-screen, most
+  downloaded). Until now `POST /api/analytics/session-end` only relayed a
+  visitor session to Telegram and persisted nothing — no way to answer "where
+  did people come from" or "what did they look at" after the fact.
+  - **Client**: `src/scripts/analyticsTracker.ts` now also listens for
+    `mw:reel-world` (the existing cross-island event Reel/CategoryGrid/
+    ThemeGrid already fire whenever a specific wallpaper becomes the one on
+    screen) and records `{world, assetId, enteredAt, exitedAt}` segments in
+    `sessionStorage` alongside the existing page chain, closing one out
+    whenever the wallpaper changes (de-duped against the CTA's harmless
+    re-announce of the wallpaper already showing). At session end these
+    collapse to `{world, assetId, dwellMs}` and ride along in the same
+    `sendBeacon` payload as `pages`/`actions` — no new network calls.
+  - **Server**: `src/pages/api/analytics/session-end.ts` validates the new
+    `wallpaperViews` array the same way `/api/downloads` validates its input
+    (world against `WORLD_KEYS`, assetId regex, dwell capped at 24h to reject
+    a bad client clock), groups by target doc so nothing writes the same
+    Firestore doc twice in one batch (a revisited page/wallpaper would
+    otherwise crash the batch), and commits: `page_stats/<slug>`
+    (`path`/`views`/`dwellMs`), `referrer_stats/<hostname|'direct'>`
+    (`sessions` — traffic source), `entry_page_stats/<slug>`
+    (`path`/`sessions` — landing page, from `pages[0]`), and `views`/`dwellMs`
+    merged onto the existing `wallpaper_assets/<id>` and `world_stats/<world>`
+    docs (same docs `/api/downloads` already increments `downloads`/
+    `lastDownloadedAt` on). This aggregation runs for every valid session,
+    **including bounces** — a quick page view is still real traffic data —
+    unlike the Telegram notification right after it, which still skips
+    bounces to avoid noise. All best-effort: a write failure here is caught
+    and logged, never breaks the response.
+  - **Admin**: `src/lib/adminData.ts` gained `fetchTrafficSources`,
+    `fetchEntryPages`, `fetchTopPages`, `fetchMostViewedAssets`,
+    `fetchMostDwelledAssets` (each a single-field `orderBy`, no composite
+    index) alongside the existing `fetchTopAssets`/`fetchWorldStats`
+    (extended with `views`/`dwellMs` too). `src/pages/admin/seo.astro` reads
+    all of them in parallel. Both admin pages gained a tab nav between
+    "Survey & downloads" (`/admin`) and "SEO & traffic" (`/admin/seo`).
+  - Smoke-tested against the real `motivewallpaper-220e4` project: posted a
+    synthetic session-end payload (flagged as a bounce via low scroll % so it
+    wouldn't fire a real Telegram message — `TELEGRAM_BOT_TOKEN` is
+    configured locally) and confirmed `/admin/seo` rendered the exact
+    referrer, entry page, page dwell, and per-wallpaper view/dwell values
+    back correctly. Test counters were reverted afterward.
+  - **Caveat worth knowing**: Screen One's reel auto-advances one panel every
+    5s until the visitor interacts, so "time spent on wallpaper X" is partly
+    a function of autoplay exposure (how early/long it sat mid-rotation), not
+    purely organic interest — shown as both a total (`dwellMs`) and an
+    average per view so it's at least legible, not fixed further.
+
+- **2026-09-13** — `/admin` dashboard built (per `admin-build-brief.md`, extended)
+  + download tracking added. Previously downloads produced only a fire-and-forget
+  Telegram log with no wallpaper/category attached and nothing persisted — no
+  way to answer "which wallpaper/category gets downloaded most."
+  - **`POST /api/downloads`** (`src/pages/api/downloads.ts`) — fired from
+    `CaptureSheet.astro` at the moment a real download starts (alongside the
+    existing `trackAction('Downloaded wallpaper')` call), fire-and-forget,
+    `keepalive: true`. Validates `world` against `WORLD_KEYS`; `assetId` optional
+    (best-effort — a since-deleted asset just skips its increment). One batch
+    write: `+1` on `wallpaper_assets/<id>.downloads`, `+1` on
+    `world_stats/<world>.downloads`, one `download_events` row (`assetId`,
+    `world`, `userAgent`, `referer`, `createdAt`) for future trend queries.
+  - **`/admin`** (`src/pages/admin/index.astro`) + **`/admin/responses.csv`**
+    (`src/pages/admin/responses.csv.ts`) — HTTP Basic Auth
+    (`src/lib/adminAuth.ts`, constant-time compare, 500s if `ADMIN_PASSWORD`
+    unset so it never runs open). Reads/CSV logic shared via
+    `src/lib/adminData.ts`. Page shows: total/complete/partial survey-row
+    counts, total downloads, a downloads-by-category table (all 7 worlds,
+    zero-filled), a top-20-wallpapers-by-downloads table (thumbnail via signed
+    URL, categories, preferred flag), and the full `survey_responses` table
+    (newest 500, `?status=`/`?profile=` filters) with a CSV export link that
+    carries the same filters.
+  - Smoke-tested against the real `motivewallpaper-220e4` project: auth gate
+    (401 no-auth / 401 wrong / 200 correct), CSV export with real rows,
+    `/api/downloads` validation (400 on bad world key) and both counters +
+    the leaderboard updating and rendering correctly with a real asset id.
+    Test rows/counters incremented during this were reverted afterward.
+  - `.env.example` gained `ADMIN_USER`/`ADMIN_PASSWORD`. `robots.txt` already
+    disallowed `/admin`. **Not yet done:** set `ADMIN_USER`/`ADMIN_PASSWORD`
+    in Vercel env vars — `/admin` 500s in production until then.
 
 - **2026-09-11** — `/gallery` reworked to show every real uploaded photo, not
   just one hero pick per category: now built from `GET /api/wallpapers?feed=1`

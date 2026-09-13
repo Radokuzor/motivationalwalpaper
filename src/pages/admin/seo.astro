@@ -1,0 +1,232 @@
+---
+/**
+ * /admin/seo — traffic dashboard: where visitors came from, what they looked
+ * at, and for how long. Second screen alongside /admin (survey + downloads).
+ * Basic Auth gated, same as /admin.
+ */
+export const prerender = false;
+
+import '../../styles/tokens.css';
+import { requireBasicAuth } from '../../lib/adminAuth';
+
+const denied = requireBasicAuth(Astro.request);
+if (denied) return denied;
+
+import {
+  fetchTrafficSources,
+  fetchEntryPages,
+  fetchTopPages,
+  fetchMostViewedAssets,
+  fetchMostDwelledAssets,
+  fetchTopAssets,
+} from '../../lib/adminData';
+
+const [traffic, entryPages, topPages, mostViewed, mostDwelled, mostDownloaded] = await Promise.all([
+  fetchTrafficSources(20),
+  fetchEntryPages(20),
+  fetchTopPages(20),
+  fetchMostViewedAssets(20),
+  fetchMostDwelledAssets(20),
+  fetchTopAssets(20),
+]);
+
+const fmtDuration = (ms: number): string => {
+  if (ms <= 0) return '0s';
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+};
+const avgDwell = (dwellMs: number, views: number) => (views > 0 ? fmtDuration(dwellMs / views) : '—');
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin — SEO &amp; traffic — motivationalwallpaper.com</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: var(--t-body-size);
+      line-height: var(--t-body-leading);
+      padding: 24px;
+    }
+    h1 { font-size: var(--t-title1-size); margin: 0 0 4px; }
+    h2 { font-size: var(--t-title2-size); margin: 32px 0 12px; }
+    .sub { color: var(--ink-soft); margin: 0 0 8px; font-size: var(--t-small-size); }
+    nav.tabs { margin-bottom: 20px; }
+    nav.tabs a {
+      color: var(--ink-soft);
+      text-decoration: none;
+      font-size: var(--t-small-size);
+      margin-right: 16px;
+      padding-bottom: 2px;
+      border-bottom: 2px solid transparent;
+    }
+    nav.tabs a.active { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-m);
+      overflow: hidden;
+      font-size: var(--t-small-size);
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--hairline);
+      white-space: nowrap;
+    }
+    th { background: var(--surface-2); font-size: var(--t-label-size); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+    tr:last-child td { border-bottom: none; }
+    .scroll { overflow-x: auto; }
+    .thumb { width: 44px; height: 60px; object-fit: cover; border-radius: 6px; vertical-align: middle; }
+    .empty { color: var(--ink-faint); padding: 16px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>motivationalwallpaper.com — admin</h1>
+  <p class="sub">Internal, read-only. Not indexed.</p>
+  <nav class="tabs">
+    <a href="/admin">Survey &amp; downloads</a>
+    <a href="/admin/seo" class="active">SEO &amp; traffic</a>
+  </nav>
+
+  <div class="grid">
+    <div>
+      <h2>Traffic sources</h2>
+      <p class="sub">Where visitors came from before landing on the site.</p>
+      {traffic.length === 0 ? (
+        <p class="empty">No sessions recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Source</th><th>Sessions</th></tr></thead>
+            <tbody>
+              {traffic.map((t) => (
+                <tr><td>{t.bucket === 'direct' ? 'Direct / no referrer' : t.bucket}</td><td>{t.sessions}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <div>
+      <h2>Entry pages</h2>
+      <p class="sub">First page of the site each session landed on.</p>
+      {entryPages.length === 0 ? (
+        <p class="empty">No sessions recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Page</th><th>Sessions</th></tr></thead>
+            <tbody>
+              {entryPages.map((e) => (
+                <tr><td>{e.path}</td><td>{e.sessions}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <h2>Most viewed pages</h2>
+  <p class="sub">Every page load, site-wide (Screen One, blog, /wallpapers/&lt;category&gt; SEO pages…), with average time spent per visit.</p>
+  {topPages.length === 0 ? (
+    <p class="empty">No page views recorded yet.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Page</th><th>Views</th><th>Avg. time on page</th></tr></thead>
+        <tbody>
+          {topPages.map((p) => (
+            <tr><td>{p.path}</td><td>{p.views}</td><td>{avgDwell(p.dwellMs, p.views)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <h2>Most viewed wallpapers</h2>
+  <p class="sub">Counted every time a specific photo became the one on screen in the reel or category grid.</p>
+  {mostViewed.length === 0 ? (
+    <p class="empty">No wallpaper views recorded yet.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Preview</th><th>Asset ID</th><th>Categories</th><th>Views</th><th>Avg. time on screen</th></tr></thead>
+        <tbody>
+          {mostViewed.map((a) => (
+            <tr>
+              <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+              <td>{a.id}</td>
+              <td>{a.worlds.join(', ') || '—'}</td>
+              <td>{a.views}</td>
+              <td>{avgDwell(a.dwellMs, a.views)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <h2>Wallpapers people spent the most time on</h2>
+  <p class="sub">Total time on screen summed across every visitor — not just the most-viewed, the most-lingered-on.</p>
+  {mostDwelled.length === 0 ? (
+    <p class="empty">No wallpaper views recorded yet.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Preview</th><th>Asset ID</th><th>Categories</th><th>Total time</th><th>Views</th></tr></thead>
+        <tbody>
+          {mostDwelled.map((a) => (
+            <tr>
+              <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+              <td>{a.id}</td>
+              <td>{a.worlds.join(', ') || '—'}</td>
+              <td>{fmtDuration(a.dwellMs)}</td>
+              <td>{a.views}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <h2>Most downloaded wallpapers</h2>
+  {mostDownloaded.length === 0 ? (
+    <p class="empty">No downloads recorded yet.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Preview</th><th>Asset ID</th><th>Categories</th><th>Downloads</th></tr></thead>
+        <tbody>
+          {mostDownloaded.map((a) => (
+            <tr>
+              <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+              <td>{a.id}</td>
+              <td>{a.worlds.join(', ') || '—'}</td>
+              <td>{a.downloads}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</body>
+</html>

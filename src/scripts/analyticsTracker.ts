@@ -10,10 +10,13 @@
  * one (external nav, tab close, refresh without a tracked click).
  */
 
+import { MW, on } from './events';
+
 const SESSION_KEY = 'mw_analytics_session';
 const NAV_CONTINUES_KEY = 'mw_analytics_nav_continues';
 const PURCHASED_KEY = 'website_purchased';
 const SKIP_PREFIXES = ['/admin', '/dashboard'];
+const MAX_WALLPAPER_VIEWS = 100;
 
 interface PageVisit {
   path: string;
@@ -22,12 +25,22 @@ interface PageVisit {
   maxScrollPct: number;
 }
 
+/** One stretch of time a specific wallpaper (reel panel / category-grid tile)
+ *  sat on screen — from `mw:reel-world` to the next one, or session end. */
+interface WallpaperVisit {
+  world: string;
+  assetId: string | null;
+  enteredAt: number;
+  exitedAt: number | null;
+}
+
 interface SessionState {
   sessionId: string;
   startedAt: number;
   referrer: string | null;
   pages: PageVisit[];
   actions: string[];
+  wallpaperViews?: WallpaperVisit[];
 }
 
 function shouldTrack(path: string): boolean {
@@ -64,6 +77,11 @@ function saveState(state: SessionState): void {
 
 function currentPage(state: SessionState): PageVisit | undefined {
   return state.pages[state.pages.length - 1];
+}
+
+function currentWallpaperView(state: SessionState): WallpaperVisit | undefined {
+  const list = state.wallpaperViews;
+  return list && list[list.length - 1];
 }
 
 /** Marks a successful purchase so the abandoned-checkout notification is skipped. */
@@ -173,20 +191,30 @@ export function initAnalyticsTracker(): void {
 
     const current = loadState();
     if (!current) return;
+    const now = Date.now();
     const last = currentPage(current);
     if (last && last.exitedAt === null) {
-      last.exitedAt = Date.now();
+      last.exitedAt = now;
       last.maxScrollPct = Math.max(last.maxScrollPct, computeScrollPct());
     }
+    const lastWallpaper = currentWallpaperView(current);
+    if (lastWallpaper && lastWallpaper.exitedAt === null) lastWallpaper.exitedAt = now;
 
     const payload = {
       sessionId: current.sessionId,
       pages: current.pages,
       startedAt: current.startedAt,
-      endedAt: Date.now(),
+      endedAt: now,
       referrer: current.referrer,
       purchased: sessionStorage.getItem(PURCHASED_KEY) === '1',
       actions: current.actions ?? [],
+      // Collapse to {world, assetId, dwellMs} — the server only aggregates,
+      // raw enter/exit timestamps would just be dead weight in the payload.
+      wallpaperViews: (current.wallpaperViews ?? []).map((w) => ({
+        world: w.world,
+        assetId: w.assetId,
+        dwellMs: Math.max(0, (w.exitedAt ?? now) - w.enteredAt),
+      })),
     };
 
     try {
@@ -196,6 +224,27 @@ export function initAnalyticsTracker(): void {
       // sendBeacon is best-effort; a failure here is not recoverable.
     }
   }
+
+  // Tracks which wallpaper (reel panel / category-grid tile) is on screen,
+  // for "most viewed" / "time spent" stats — fires on every real change of
+  // the on-screen wallpaper (Reel.astro de-dupes re-announcing the same one,
+  // except when the CTA re-announces the current panel before opening the
+  // capture sheet, which the guard below skips so a click doesn't fragment
+  // an otherwise-continuous dwell into a fresh near-zero entry).
+  on(MW.reelWorld, (d) => {
+    const state = loadState();
+    if (!state) return;
+    if (!state.wallpaperViews) state.wallpaperViews = [];
+    const assetId = d.asset?.id ?? null;
+    const last = currentWallpaperView(state);
+    if (last && last.exitedAt === null && last.world === d.world && last.assetId === assetId) return;
+    const now = Date.now();
+    if (last && last.exitedAt === null) last.exitedAt = now;
+    if (state.wallpaperViews.length < MAX_WALLPAPER_VIEWS) {
+      state.wallpaperViews.push({ world: d.world, assetId, enteredAt: now, exitedAt: null });
+    }
+    saveState(state);
+  });
 
   window.addEventListener('scroll', onScroll, { passive: true });
   document.addEventListener('click', onDocumentClick, { capture: true });
