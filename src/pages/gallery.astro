@@ -11,6 +11,7 @@
  */
 import ChromeLayout from '../layouts/ChromeLayout.astro';
 import LockScreen from '../components/LockScreen.astro';
+import CaptureSheet from '../components/CaptureSheet.astro';
 import { WORLDS } from '../data/worlds';
 
 // structural chrome only (clock, dynamic island, share/preview icons, home
@@ -49,15 +50,18 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   </div>
 
   <template id="gallery-tile-template">
-    <a class="tile" href="/">
+    <button type="button" class="tile">
       <div class="tile__art">
         <LockScreen world={TEMPLATE_WORLD} brandTag={false} />
       </div>
-    </a>
+    </button>
   </template>
+
+  <CaptureSheet />
 </ChromeLayout>
 
 <script>
+  import { MW, emit } from '../scripts/events';
   import type { WorldKey } from '../data/worlds';
 
   interface FeedAsset {
@@ -72,11 +76,21 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   const template = document.getElementById('gallery-tile-template') as HTMLTemplateElement;
   const sections = Array.from(document.querySelectorAll<HTMLElement>('.category'));
 
-  function tileFor(asset: FeedAsset): HTMLElement {
+  // Tapping a tile never navigates away — it hands the exact photo to the
+  // capture sheet (phone/email toggle) so the visitor is prompted to leave
+  // contact info before the download starts, same flow as the lock-screen reel.
+  function tileFor(asset: FeedAsset, world: WorldKey): HTMLElement {
     const frag = template.content.cloneNode(true) as DocumentFragment;
-    const tile = frag.querySelector('.tile') as HTMLAnchorElement;
+    const tile = frag.querySelector('.tile') as HTMLButtonElement;
     const art = tile.querySelector('.tile__art') as HTMLElement;
     art.style.setProperty('--art', `url("${asset.thumbUrl}") center/cover no-repeat`);
+    tile.addEventListener('click', () => {
+      emit(MW.reelWorld, {
+        world,
+        asset: { id: asset.id, thumbUrl: asset.thumbUrl, originalUrl: asset.originalUrl },
+      });
+      emit(MW.openCapture);
+    });
     return tile;
   }
 
@@ -91,7 +105,7 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
         const matches = items.filter((a) => a.worlds.includes(world));
         if (!matches.length) return; // no real photo for this category yet — leave it hidden
         const grid = section.querySelector('.grid') as HTMLElement;
-        grid.append(...matches.map(tileFor));
+        grid.append(...matches.map((a) => tileFor(a, world)));
         section.hidden = false;
         anyShown = true;
       });
@@ -137,10 +151,20 @@ const TEMPLATE_WORLD = WORLDS.find((w) => w.key === 'stoic')!;
   }
   .tile {
     display: block;
+    width: 100%;
+    padding: 0;
     border: 1px solid var(--hairline);
     border-radius: var(--r-m);
     overflow: hidden;
     background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+  }
+  .tile:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .tile__art {
     position: relative;
