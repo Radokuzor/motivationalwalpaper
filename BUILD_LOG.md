@@ -4,7 +4,7 @@ Living status doc. What the site does today, what's verified, what's next.
 Companion briefs (self-contained, paste into a fresh chat to build):
 
 - `backend-build-brief.md` — survey capture backend *(built)*
-- `admin-build-brief.md` — internal admin/export page *(not built)*
+- `admin-build-brief.md` — internal admin/export page *(built; extended with download stats — see History)*
 - `design/screen-one-build-brief.md` — Screen One spec *(built; `design/screen-one.html` is a FROZEN reference)*
 
 ---

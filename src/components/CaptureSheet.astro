@@ -505,6 +505,14 @@ import Quiz from './Quiz.astro';
           },
         );
         trackAction('Downloaded wallpaper');
+        // Best-effort counter bump for the admin dashboard — never blocks the
+        // download or the rest of the flow.
+        void fetch('/api/downloads', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ assetId: currentAsset.id, world: currentWorld }),
+          keepalive: true,
+        }).catch(() => {});
       }
       if (v) {
         trackAction(mode === 'phone' ? 'Submitted phone' : 'Submitted email');

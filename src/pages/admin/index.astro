@@ -1,0 +1,216 @@
+---
+/**
+ * /admin — internal dashboard (per admin-build-brief.md, extended with
+ * download stats). Basic Auth gated. Read-only.
+ */
+export const prerender = false;
+
+import '../../styles/tokens.css';
+import { requireBasicAuth } from '../../lib/adminAuth';
+
+const denied = requireBasicAuth(Astro.request);
+if (denied) return denied;
+
+import {
+  fetchSurveyResponses,
+  summarizeSurvey,
+  fetchWorldStats,
+  fetchTopAssets,
+  PROFILE_KEYS,
+} from '../../lib/adminData';
+
+const statusFilter = Astro.url.searchParams.get('status') ?? '';
+const profileFilter = Astro.url.searchParams.get('profile') ?? '';
+
+const [rows, worldStats, topAssets] = await Promise.all([
+  fetchSurveyResponses({ status: statusFilter || undefined, profile: profileFilter || undefined }),
+  fetchWorldStats(),
+  fetchTopAssets(20),
+]);
+
+const summary = summarizeSurvey(rows);
+const totalDownloads = worldStats.reduce((sum, w) => sum + w.downloads, 0);
+
+const exportQuery = new URLSearchParams();
+if (statusFilter) exportQuery.set('status', statusFilter);
+if (profileFilter) exportQuery.set('profile', profileFilter);
+const exportHref = `/admin/responses.csv${exportQuery.toString() ? `?${exportQuery}` : ''}`;
+
+const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin — motivationalwallpaper.com</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: var(--t-body-size);
+      line-height: var(--t-body-leading);
+      padding: 24px;
+    }
+    h1 { font-size: var(--t-title1-size); margin: 0 0 4px; }
+    h2 { font-size: var(--t-title2-size); margin: 32px 0 12px; }
+    .sub { color: var(--ink-soft); margin: 0 0 24px; font-size: var(--t-small-size); }
+    .cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-m);
+      padding: 14px 18px;
+      min-width: 140px;
+    }
+    .card .n { font-size: 1.75rem; font-weight: 700; }
+    .card .l {
+      font-size: var(--t-label-size);
+      letter-spacing: var(--t-label-track);
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-m);
+      overflow: hidden;
+      font-size: var(--t-small-size);
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--hairline);
+      white-space: nowrap;
+    }
+    th { background: var(--surface-2); font-size: var(--t-label-size); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+    tr:last-child td { border-bottom: none; }
+    .scroll { overflow-x: auto; }
+    .thumb { width: 44px; height: 60px; object-fit: cover; border-radius: 6px; vertical-align: middle; }
+    form.filters { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
+    form.filters label { display: flex; flex-direction: column; font-size: var(--t-label-size); color: var(--ink-soft); gap: 4px; }
+    select, button, .btn {
+      font: inherit;
+      padding: 6px 10px;
+      border-radius: var(--r-s);
+      border: 1px solid var(--hairline-strong);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button, .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .empty { color: var(--ink-faint); padding: 16px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>motivationalwallpaper.com — admin</h1>
+  <p class="sub">Internal, read-only. Not indexed.</p>
+
+  <div class="cards">
+    <div class="card"><div class="n">{summary.total}</div><div class="l">Survey rows (last {rows.length < 500 ? rows.length : '500+'})</div></div>
+    <div class="card"><div class="n">{summary.byStatus.complete ?? 0}</div><div class="l">Completed</div></div>
+    <div class="card"><div class="n">{summary.byStatus.partial ?? 0}</div><div class="l">Partial / abandoned</div></div>
+    <div class="card"><div class="n">{totalDownloads}</div><div class="l">Total downloads</div></div>
+  </div>
+
+  <h2>Downloads by category</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Category</th><th>Downloads</th></tr></thead>
+      <tbody>
+        {worldStats.map((w) => (
+          <tr><td>{w.name}</td><td>{w.downloads}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Top wallpapers by downloads</h2>
+  {topAssets.length === 0 ? (
+    <p class="empty">No downloads recorded yet.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Preview</th><th>Asset ID</th><th>Categories</th><th>Preferred</th><th>Downloads</th></tr></thead>
+        <tbody>
+          {topAssets.map((a) => (
+            <tr>
+              <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+              <td>{a.id}</td>
+              <td>{a.worlds.join(', ') || '—'}</td>
+              <td>{a.preferred ? '★' : ''}</td>
+              <td>{a.downloads}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <h2>Survey responses</h2>
+  <form class="filters" method="get">
+    <label>
+      Status
+      <select name="status">
+        <option value="">All</option>
+        <option value="complete" selected={statusFilter === 'complete'}>Complete</option>
+        <option value="partial" selected={statusFilter === 'partial'}>Partial</option>
+      </select>
+    </label>
+    <label>
+      Profile
+      <select name="profile">
+        <option value="">All</option>
+        {PROFILE_KEYS.map((p) => (
+          <option value={p} selected={profileFilter === p}>{p}</option>
+        ))}
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+    <a class="btn" href={exportHref}>Export CSV</a>
+  </form>
+
+  {rows.length === 0 ? (
+    <p class="empty">No survey responses match this filter.</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th><th>Status</th><th>Profile</th><th>World</th><th>Email</th>
+            <th>Phone</th><th>Age</th><th>Gender</th><th>Life</th><th>Inspires</th>
+            <th>Email status</th><th>SMS status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td>{fmt(r.createdAt)}</td>
+              <td>{r.status ?? '—'}</td>
+              <td>{r.profile ?? '—'}</td>
+              <td>{r.world ?? '—'}</td>
+              <td>{r.email ?? '—'}</td>
+              <td>{r.phone ?? '—'}</td>
+              <td>{r.age ?? '—'}</td>
+              <td>{r.gender ?? '—'}</td>
+              <td>{r.life ?? '—'}</td>
+              <td>{r.inspires.join('; ') || '—'}</td>
+              <td>{r.emailStatus ?? '—'}</td>
+              <td>{r.smsStatus ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</body>
+</html>
