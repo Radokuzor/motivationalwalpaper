@@ -29,6 +29,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { STEPS, routeProfile, worldForProfile } from '../../data/quiz';
 import { quoteSlug, pickQuoteForFigures } from '../../data/quotes';
 import { db } from '../../lib/firebase';
+import { notifyTelegram, escapeMarkdown } from '../../lib/telegram';
 
 export const prerender = false;
 
@@ -185,12 +186,20 @@ export const POST: APIRoute = async ({ request }) => {
   };
   if (complete) data.completedAt = FieldValue.serverTimestamp();
 
+  let previousEmail: string | null = null;
+  let previousPhone: string | null = null;
   try {
     const col = db.collection('survey_responses');
     if (rawId) {
       const ref = col.doc(rawId);
       const snap = await ref.get();
-      if (!snap.exists) data.createdAt = FieldValue.serverTimestamp();
+      if (!snap.exists) {
+        data.createdAt = FieldValue.serverTimestamp();
+      } else {
+        const prev = snap.data() ?? {};
+        previousEmail = typeof prev.email === 'string' ? prev.email : null;
+        previousPhone = typeof prev.phone === 'string' ? prev.phone : null;
+      }
       await ref.set(data, { merge: true });
     } else {
       data.createdAt = FieldValue.serverTimestamp();
@@ -199,6 +208,20 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (err) {
     console.error('survey_responses write failed', err);
     return json({ ok: false, error: 'write failed' }, 500);
+  }
+
+  // Notify on a newly captured (or corrected) contact only — not on every
+  // later quiz-step upsert that just resends the same value. Awaited so the
+  // notification actually goes out before this serverless invocation ends.
+  const newEmail = email && email !== previousEmail ? email : null;
+  const newPhone = phone && phone !== previousPhone ? phone : null;
+  if (newEmail || newPhone) {
+    const lines = ['📩 *motivationalwallpaper.com* — new contact captured'];
+    if (newEmail) lines.push(`Email: ${escapeMarkdown(newEmail)}`);
+    if (newPhone) lines.push(`Phone: ${escapeMarkdown(newPhone)}`);
+    const referer = request.headers.get('referer');
+    if (referer) lines.push(`Referer: ${escapeMarkdown(referer)}`);
+    await notifyTelegram(lines.join('\n'));
   }
 
   // On completion, hand back a quote for the welcome banner. Best-effort: a null

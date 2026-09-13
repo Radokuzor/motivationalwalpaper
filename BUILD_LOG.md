@@ -62,6 +62,15 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
   else `null`), `source: 'screen-one'`, `userAgent`, `referer`, `createdAt` (first
   write), `updatedAt` (every write), `completedAt` (on complete).
 - Beehiiv / SMS **deferred** — the `'pending'` stamps are the only hook.
+- **Telegram on capture (2026-09-12).** The first time a call introduces a new
+  or changed `email`/`phone` (compared to what's already stored for that
+  `responseId`), fires `notifyTelegram()` (`src/lib/telegram.ts`) with the
+  actual value — Markdown-escaped, awaited before the response returns so it
+  isn't dropped when the serverless function ends. Later calls that resend the
+  same unchanged value (e.g. subsequent quiz-step upserts) do not re-notify.
+  Separate from the existing session-end visitor-session notifier, which only
+  ever logged a generic `"Submitted email"` action with no value and could
+  miss the moment entirely if the session got bounce-filtered.
 
 ### `POST /api/analytics/session-end` (`src/pages/api/analytics/session-end.ts`, `prerender = false`)
 
@@ -98,7 +107,7 @@ the timer for good; `prefers-reduced-motion` skips it entirely.
 | Item | Notes |
 |---|---|
 | **Production `/api/survey` check** | Confirm `FIREBASE_*` env vars are set in Vercel — otherwise every submit fails silently. `curl` the live URL, expect a row. |
-| **Production Telegram check** | Set `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` in Vercel (all environments) — otherwise `notifyTelegram()` silently no-ops and no visitor-session notifications arrive. Browse the live site past the bounce threshold and confirm a Telegram message lands. |
+| **Production Telegram check** | Set `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` in Vercel (all environments) — otherwise `notifyTelegram()` silently no-ops and no notifications arrive (visitor-session or contact-capture). Submit a real email/phone on the live site and confirm a Telegram message with the actual value lands — not yet confirmed end to end; local sandbox can't reach `api.telegram.org` to verify delivery, only that the code attempts to send at the right moments. |
 | **Real-browser E2E** | Run reel → Download → capture → quiz → Welcome on the live site. Eyeball the PNG (radial gradients Stoic/Builder are approximated; display fonts load within 400ms or fall back). |
 | **Vercel Node version** | Set Project Settings → Node.js Version → 22.x (matches `engines.node`). |
 | **Custom domain** | `astro.config.mjs` hard-codes `site: 'https://motivationalwallpaper.com'` for canonical/sitemap. Attach the domain or update `site`. |

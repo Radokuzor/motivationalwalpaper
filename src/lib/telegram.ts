@@ -6,6 +6,11 @@
  * with Telegram unconfigured). Errors from the Telegram API are logged, never
  * thrown — a failed notification must not break the caller.
  */
+/** Escape Telegram legacy-Markdown special characters in untrusted text. */
+export function escapeMarkdown(text: string): string {
+  return text.replace(/([_*`[])/g, '\\$1');
+}
+
 export async function notifyTelegram(text: string): Promise<void> {
   // Vercel exposes env vars on `process.env` at runtime; `astro dev` loads
   // `.env` into `import.meta.env`. Read whichever is populated.

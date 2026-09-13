@@ -7,7 +7,7 @@
  * relayed to Telegram (src/lib/telegram.ts) or dropped (bounce / bad payload).
  */
 import type { APIRoute } from 'astro';
-import { notifyTelegram } from '../../../lib/telegram';
+import { notifyTelegram, escapeMarkdown } from '../../../lib/telegram';
 
 export const prerender = false;
 
@@ -28,11 +28,6 @@ const SITE_NAME = 'motivationalwallpaper.com';
 const BOUNCE_DURATION_MS = 3000;
 const BOUNCE_MAX_SCROLL_PCT = 10;
 const MAX_ACTIONS = 20;
-
-/** Escape Telegram legacy-Markdown special characters in untrusted text. */
-function escapeMarkdown(text: string): string {
-  return text.replace(/([_*`[])/g, '\\$1');
-}
 
 function isPageVisit(value: unknown): value is PageVisit {
   if (!value || typeof value !== 'object') return false;
