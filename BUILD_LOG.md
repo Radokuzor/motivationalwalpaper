@@ -16,10 +16,10 @@ Companion briefs (self-contained, paste into a fresh chat to build):
 | Framework | **Astro 5.18**, `output: 'static'` — pages prerender, SSR routes opt out with `export const prerender = false` |
 | Host | **Vercel**, adapter `@astrojs/vercel` **v8** (`vercel()` from `@astrojs/vercel`) |
 | Node | `engines.node` `^20.3.0 \|\| >=22.0.0`; Vercel runs **nodejs22.x**; build locally on Node 20 (`PATH="$HOME/.local/node-v20/bin:$PATH"`) or 24 |
-| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collections `survey_responses`, `figure_quotes`, `wallpaper_assets`, `world_stats`, `download_events`, `page_stats`, `referrer_stats`, `entry_page_stats`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
+| Data | **Firebase Firestore**, project `motivewallpaper-220e4`, collections `survey_responses`, `figure_quotes`, `wallpaper_assets`, `world_stats`, `download_events`, `page_stats`, `referrer_stats`, `entry_page_stats`, `analytics_sessions` (TTL on `expireAt`), `analytics_daily`, Admin SDK only (`src/lib/firebase.ts`). Rules **deny all client access**. |
 | Assets | **Firebase Cloud Storage** (`FIREBASE_STORAGE_BUCKET`), `wallpaper_assets/<id>/original.*` + `thumb.webp`. Written by `/submit` + `/api/wallpapers` via Admin SDK; browser reads use signed URLs. `storage.rules` deny-all. |
 | Other deps | `@astrojs/sitemap` 3.7.4 (unpinned for Astro 5), `@astrojs/check` 0.9.10, `@vercel/analytics` 2.0.1 |
-| Secrets | `.env` (gitignored) + Vercel env vars: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`. Service-account JSON is gitignored (`*firebase-adminsdk*.json`). |
+| Secrets | `.env` (gitignored) + Vercel env vars: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, `ADMIN_USER`/`ADMIN_PASSWORD`, `ANALYTICS_SALT`. Service-account JSON is gitignored (`*firebase-adminsdk*.json`). |
 
 ## What the site does today
 
@@ -252,6 +252,67 @@ marcus, sarah, james, jerome, grace, diane). **Not user-facing** — public copy
 says "wallpapers" / "looks", never "world".
 
 ## History
+
+- **2026-09-18** — **Analytics rebuilt.** The old system knew three things about
+  a visit (referrer host, page chain, scroll depth) and wrote them to counter
+  documents; there was no way to ask who, where, on what, or how much of it was
+  even real. Replaced with a first-party analytics pipeline under
+  `src/lib/analytics/` — still no third-party tracker, no cookies, no stored IPs.
+
+  **Collection now**, per session: geography (country/region/city/lat-lon/
+  timezone, from Vercel's `x-vercel-ip-*` edge headers — no GeoIP database to
+  license); device (type, OS + version, browser + version, vendor, screen and
+  viewport size, DPR, orientation, touch); locale (language, timezone, local
+  hour); preferences (dark mode, reduced motion); network (effective connection
+  type, save-data); page speed as the visitor felt it (TTFB, DOM ready);
+  acquisition (full UTM set, ad click ids, `?ref=`, referrer → channel + named
+  source, including AI assistants as their own channel); identity (first-party
+  local-storage visitor id → new vs returning + visit count, plus a salted
+  per-day IP hash for unique counting); and behaviour (page chain with per-page
+  dwell, active time, scroll depth, click/keypress/pointer/scroll counters,
+  outbound link hosts, tracked actions).
+
+  **Bot separation**, three layers, explainable: self-declared user-agents
+  (~70 rules across search / AI / SEO / social / monitoring / HTTP client /
+  headless), automation tells (`navigator.webdriver`, 0×0 screen, no locale, no
+  timezone, plugin-less desktop Chrome, mobile UA with no touch), and
+  behavioural implausibility (multi-page hops under 400ms, zero interaction
+  across five pages). Scores sum to a verdict — bot ≥60, suspect 25–59 — and
+  **the reasons are stored on the session and shown in /admin**, so any verdict
+  can be audited. Bots no longer trigger Telegram notifications and no longer
+  count into `page_stats.views` / `world_stats` (they get `botViews` /
+  `botDwellMs` fields of their own).
+
+  **Reliability:** a new `POST /api/analytics/hit` fires on every page load, so a
+  page view is recorded even when the exit beacon never runs (mobile Safari kills
+  tabs without one). `POST /api/analytics/session-end` completes the record and,
+  if the hit never landed, stands in for it — one Firestore read per session end
+  decides which. Nothing is double-counted.
+
+  **Storage:** `analytics_sessions/<sessionId>` (enriched per-visit document,
+  `expireAt` driving a Firestore TTL policy — **applied 2026-09-19**, state
+  `ACTIVE`, ~120-day retention) and `analytics_daily/<YYYY-MM-DD>`
+  (counter-only rollups that never expire). No composite indexes needed: every
+  query is a single-field range with an `orderBy` on the same field.
+
+  **Dashboards:** `/admin/seo` split into `/admin/traffic` (KPIs vs. the previous
+  period, sessions-per-day chart, channel / source / domain / campaign / landing
+  breakdowns, page table with dwell + scroll + exit rate, hour-of-day, actions,
+  depth of visit), `/admin/audience` (country / city / language / timezone,
+  device / OS / browser / screen / colour scheme / connection, the bot audit
+  section, and a session explorer down to individual visits) and `/admin/content`
+  (lifetime page + wallpaper totals, moved from the old screen). `/admin/seo`
+  302s to `/admin/traffic`. Every control is a GET param so a view is a URL;
+  `/admin/sessions.csv` exports whatever is currently filtered. Shared UI in
+  `src/components/admin/`; chart palette validated for colour-vision deficiency
+  and contrast in both light and dark.
+
+  New env var `ANALYTICS_SALT` (optional, falls back to the project id).
+  Verified: `astro check` clean, production build passes, all three dashboards
+  and both endpoints exercised against a running dev server (valid payload →
+  204, bad session id → 400, malformed JSON → 400, unauthenticated admin → 401,
+  `/admin/seo` → 302 carrying its query string), and the parsing/classification
+  logic checked against real user-agent and referrer fixtures.
 
 - **2026-09-13** — `/admin` survey table: "World" column now shows the
   display category name (e.g. "Gym") instead of the internal key

@@ -1,0 +1,352 @@
+---
+/**
+ * /admin/audience — who the visitors are, on what, from where, and how much of
+ * it is real.
+ *
+ * Same window, same filters, same session documents as /admin/traffic — this
+ * page just cuts them by person and machine instead of by acquisition. The
+ * traffic-quality section at the bottom is the audit trail: every automated
+ * verdict, with the reasons that produced it, so the filter can be trusted or
+ * argued with.
+ */
+export const prerender = false;
+
+import AdminShell from '../../components/admin/AdminShell.astro';
+import FilterBar from '../../components/admin/FilterBar.astro';
+import StatCards from '../../components/admin/StatCards.astro';
+import BreakdownTable from '../../components/admin/BreakdownTable.astro';
+import { requireBasicAuth } from '../../lib/adminAuth';
+
+const denied = requireBasicAuth(Astro.request);
+if (denied) return denied;
+
+import { fetchSessions, applyFilters, computeKpis, breakdown, filterOptions } from '../../lib/analytics/query';
+import {
+  parseRange,
+  parseFilters,
+  queryString,
+  fmtDuration,
+  fmtPct,
+  fmtNumber,
+  fmtDelta,
+  fmtDateTime,
+  countryLabel,
+  DEVICE_LABELS,
+} from '../../lib/analytics/dashboard';
+
+const params = Astro.url.searchParams;
+const range = parseRange(params);
+const filters = parseFilters(params);
+const query = queryString(params);
+const action = '/admin/audience';
+
+let fetchError: string | null = null;
+let everything: Awaited<ReturnType<typeof fetchSessions>> = [];
+try {
+  everything = await fetchSessions({ fromMs: range.prevFromMs, toMs: range.toMs });
+} catch (err) {
+  console.error('audience dashboard query failed', err);
+  fetchError = err instanceof Error ? err.message : 'Unknown error';
+}
+
+const inWindow = everything.filter((s) => s.startedAt >= range.fromMs);
+const previous = everything.filter((s) => s.startedAt < range.fromMs);
+const rows = applyFilters(inWindow, filters);
+const kpis = computeKpis(rows, inWindow);
+const prevKpis = computeKpis(applyFilters(previous, filters), previous);
+const options = filterOptions(inWindow);
+
+// Bot analysis always looks at the whole unfiltered window — a bot table
+// filtered to humans is an empty table, which tells you nothing.
+const allBots = inWindow.filter((r) => r.quality === 'bot');
+const allSuspects = inWindow.filter((r) => r.quality === 'suspect');
+const reasonCounts = new Map<string, number>();
+for (const session of [...allBots, ...allSuspects]) {
+  for (const reason of session.botReasons) reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
+}
+const reasons = [...reasonCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+const recent = rows.slice(0, 120);
+const repeatVisitors = rows.filter((r) => r.visitCount > 1).length;
+const deepVisitors = rows.filter((r) => r.visitCount >= 3).length;
+
+const stats = [
+  { label: 'Sessions', value: fmtNumber(kpis.sessions), delta: fmtDelta(kpis.sessions, prevKpis.sessions) },
+  {
+    label: 'First-time visitors',
+    value: fmtPct(kpis.newVisitorShare),
+    delta: fmtDelta(kpis.newVisitorShare, prevKpis.newVisitorShare),
+    note: `${repeatVisitors} sessions from a returning browser`,
+  },
+  {
+    label: 'Came back 3+ times',
+    value: `${deepVisitors}`,
+    note: 'sessions from browsers on their third visit or later',
+  },
+  {
+    label: 'Countries reached',
+    value: `${new Set(rows.map((r) => r.country).filter(Boolean)).size}`,
+    note: `${new Set(rows.map((r) => r.city).filter(Boolean)).size} distinct cities`,
+  },
+  {
+    label: 'Bot share of all traffic',
+    value: fmtPct(kpis.botShare),
+    higherIsBetter: false,
+    note: `${fmtPct(kpis.suspectShare)} more looks automated`,
+  },
+  {
+    label: 'Median time to first byte',
+    value: kpis.avgTtfbMs === null ? '—' : `${Math.round(kpis.avgTtfbMs)}ms`,
+    note: 'as real visitors experienced it',
+  },
+];
+
+const badgeFor = (quality: string) => (quality === 'bot' ? 'bot' : quality === 'suspect' ? 'suspect' : 'human');
+---
+
+<AdminShell
+  title="Admin — audience & tech — motivationalwallpaper.com"
+  heading="Audience & tech"
+  sub={`${range.label} · ${range.fromDay} → ${range.toDay} · internal, read-only`}
+  active="audience"
+  query={query}
+>
+  <FilterBar range={range} filters={filters} params={params} options={options} action={action} exportHref={`/admin/sessions.csv${query}`} />
+
+  {fetchError && <p class="empty">Could not read analytics: {fetchError}.</p>}
+
+  <StatCards stats={stats} />
+
+  <h2>Where in the world</h2>
+  <div class="grid">
+    <BreakdownTable
+      title="Countries"
+      sub="From the edge network's own IP geolocation — no third-party tracker involved."
+      dimension="Country"
+      rows={breakdown(rows, (r) => r.country ?? 'unknown', (k) => countryLabel(k), 20)}
+      filterKey="country"
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Cities"
+      sub="City-level accuracy varies a lot by network — treat it as a strong hint, not a fact."
+      dimension="City"
+      rows={breakdown(rows, (r) => (r.city ? `${r.city}${r.country ? `, ${r.country}` : ''}` : null), (k) => k, 20)}
+      emptyText="No city data — the edge could not place these visitors."
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Languages"
+      sub="The browser's preferred language. The clearest signal for whether translating anything would pay."
+      dimension="Language"
+      rows={breakdown(rows, (r) => r.language ?? 'unknown', (k) => k, 15)}
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Time zones"
+      sub="Where their clock is, which is often truer than where their IP says they are."
+      dimension="Time zone"
+      rows={breakdown(rows, (r) => r.timezone ?? 'unknown', (k) => k, 15)}
+      params={params}
+      action={action}
+    />
+  </div>
+
+  <h2>What they are using</h2>
+  <div class="grid">
+    <BreakdownTable
+      title="Device type"
+      sub="This is a lock-screen product: the phone share is the number that matters most."
+      dimension="Device"
+      rows={breakdown(rows, (r) => r.deviceType, (k) => DEVICE_LABELS[k] ?? k)}
+      filterKey="device"
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Operating system"
+      sub="iOS vs Android decides which wallpaper sizes and install instructions matter."
+      dimension="OS"
+      rows={breakdown(rows, (r) => (r.osVersion ? `${r.os} ${r.osVersion}` : r.os), (k) => k, 15)}
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Browser"
+      sub="In-app browsers (Instagram, TikTok, Facebook) appear by name — they behave differently and often break downloads."
+      dimension="Browser"
+      rows={breakdown(rows, (r) => r.browser, (k) => k, 15)}
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Screen size"
+      sub="Bucketed by CSS width. Where your real layout breakpoints should be."
+      dimension="Screen"
+      rows={breakdown(rows, (r) => r.screenBucket, (k) => k, 12)}
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Colour scheme"
+      sub="Whether the visitor's device is in dark mode."
+      dimension="Preference"
+      rows={breakdown(rows, (r) => r.colorScheme ?? 'unknown', (k) => (k === 'dark' ? 'Dark mode' : k === 'light' ? 'Light mode' : 'Unknown'), 5)}
+      params={params}
+      action={action}
+      showConversions={false}
+    />
+    <BreakdownTable
+      title="Connection"
+      sub="Effective network speed as the browser reports it. A large slow-connection share is an image-weight problem."
+      dimension="Connection"
+      rows={breakdown(rows, (r) => r.connection ?? 'unknown', (k) => k, 8)}
+      params={params}
+      action={action}
+      showConversions={false}
+    />
+  </div>
+
+  <h2>Traffic quality <span class="hint">the audit trail behind the humans / bots filter</span></h2>
+  <details class="explain" open>
+    <summary>How bots are separated here</summary>
+    <p>
+      Three layers, applied in order. A user-agent that <strong>names itself</strong> (Googlebot, GPTBot,
+      AhrefsBot, curl…) is certain and scores 100. Then <strong>automation tells</strong> — a browser reporting
+      <code>navigator.webdriver</code>, a 0×0 screen, no language, no timezone. Then
+      <strong>behavioural implausibility</strong> — six pages in four seconds, never a scroll, never a pointer move.
+      Scores add up: 60+ is called a bot, 25–59 is "suspected", below that is treated as a person.
+    </p>
+    <p>
+      The one thing this <em>cannot</em> see: crawlers that never run JavaScript never reach the tracker at all, so
+      they are missing from every number on this site rather than inflating them. Server logs are the only place
+      those show up. What you see here is the JS-executing slice — headless browsers, AI agents, preview fetchers.
+    </p>
+  </details>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>Quality mix</h3>
+      <p class="sub">Every session in the window, before any filter.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Class</th><th class="num">Sessions</th><th class="num">Share</th><th class="num">Pageviews</th></tr></thead>
+          <tbody>
+            {(['human', 'suspect', 'bot'] as const).map((quality) => {
+              const group = inWindow.filter((r) => r.quality === quality);
+              return (
+                <tr>
+                  <td>
+                    <span class={`badge ${quality}`}>
+                      {quality === 'human' ? 'Human' : quality === 'suspect' ? 'Suspected bot' : 'Bot'}
+                    </span>
+                  </td>
+                  <td class="num">{group.length}</td>
+                  <td class="num">{fmtPct(group.length / Math.max(1, inWindow.length), 1)}</td>
+                  <td class="num">{group.reduce((sum, r) => sum + r.pageviews, 0)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <BreakdownTable
+      title="Which bots"
+      sub="Named crawlers. AI crawlers here mean your pages are being read into assistants — that is a distribution channel, not just noise."
+      dimension="Bot"
+      rows={breakdown(allBots, (r) => r.botName ?? 'Unnamed automation', (k) => k, 20)}
+      emptyText="No bots identified in this window."
+      showConversions={false}
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Bot category"
+      sub="Search indexers, AI crawlers, SEO tools, link previews, monitors, raw HTTP clients."
+      dimension="Category"
+      rows={breakdown(allBots, (r) => r.botCategory ?? 'other', (k) => k, 10)}
+      emptyText="No bots identified in this window."
+      showConversions={false}
+      params={params}
+      action={action}
+    />
+
+    <div class="panel">
+      <h3>Why sessions were flagged</h3>
+      <p class="sub">Across bots and suspects both — the evidence, counted.</p>
+      {reasons.length === 0 ? (
+        <p class="empty">Nothing flagged in this window.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Reason</th><th class="num">Sessions</th></tr></thead>
+            <tbody>
+              {reasons.map(([reason, count]) => (
+                <tr><td class="wide">{reason}</td><td class="num">{count}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <h2>Session explorer <span class="hint">the raw record — {recent.length} of {rows.length} matching sessions</span></h2>
+  <p class="sub">
+    Newest first. This is where a number on any other page can be traced back to individual visits — useful when a
+    breakdown row looks too good or too strange to believe.
+  </p>
+  {recent.length === 0 ? (
+    <p class="empty">No sessions match the current filters.</p>
+  ) : (
+    <div class="panel scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Started</th>
+            <th>Quality</th>
+            <th>From</th>
+            <th>Location</th>
+            <th>Device</th>
+            <th>Path</th>
+            <th class="num">Pages</th>
+            <th class="num">Time</th>
+            <th class="num">Scroll</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recent.map((session) => (
+            <tr>
+              <td class="mono">{fmtDateTime(session.startedAt)}</td>
+              <td>
+                <span class={`badge ${badgeFor(session.quality)}`} title={session.botReasons.join(' · ') || 'No automation signals'}>
+                  {session.quality === 'human' ? 'Human' : session.quality === 'suspect' ? `Suspect ${session.botScore}` : session.botName ?? 'Bot'}
+                </span>
+              </td>
+              <td>
+                {session.source}
+                {session.campaign && <div class="muted" style="font-size:var(--t-label-size)">{session.campaign}</div>}
+              </td>
+              <td>{[session.city, session.country ? countryLabel(session.country) : null].filter(Boolean).join(' · ') || '—'}</td>
+              <td>
+                {DEVICE_LABELS[session.deviceType] ?? session.deviceType} · {session.os}
+                <div class="muted" style="font-size:var(--t-label-size)">{session.browser}{session.screenW > 0 ? ` · ${session.screenW}×${session.screenH}` : ''}</div>
+              </td>
+              <td class="wide mono">{session.pages.map((p) => p.path).join(' → ') || session.landingPath}</td>
+              <td class="num">{session.pageviews}</td>
+              <td class="num">{session.completed ? fmtDuration(session.durationMs) : '—'}</td>
+              <td class="num">{session.maxScrollPct}%</td>
+              <td>{session.actions.join(', ') || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</AdminShell>

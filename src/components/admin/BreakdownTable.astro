@@ -1,0 +1,93 @@
+---
+/**
+ * One dimension, the same five metrics every time: sessions (with a magnitude
+ * meter), share, pages per session, average duration, bounce rate, and
+ * sessions that took an action.
+ *
+ * Using an identical metric set for every dimension is the point — it makes
+ * rows comparable across tables ("Pinterest bounces at 70%, organic search at
+ * 30%") instead of each table telling its own unrelated story.
+ *
+ * When `filterKey` is set each row links back to the same page filtered to that
+ * value, which is how you go from "Germany is 12% of traffic" to "and here is
+ * what those twelve percent actually did".
+ */
+import { fmtDuration, fmtPct, queryString } from '../../lib/analytics/dashboard';
+import type { BreakdownRow } from '../../lib/analytics/query';
+
+export interface Props {
+  title: string;
+  sub?: string;
+  rows: BreakdownRow[];
+  /** Column header for the dimension itself, e.g. "Source". */
+  dimension: string;
+  /** Filter param this dimension drills into; omit for a read-only table. */
+  filterKey?: string;
+  params?: URLSearchParams;
+  action?: string;
+  emptyText?: string;
+  showConversions?: boolean;
+}
+
+const {
+  title,
+  sub,
+  rows,
+  dimension,
+  filterKey,
+  params,
+  action = '',
+  emptyText = 'Nothing recorded in this window.',
+  showConversions = true,
+} = Astro.props;
+
+const max = Math.max(1, ...rows.map((r) => r.sessions));
+---
+
+<div class="panel">
+  <h3>{title}</h3>
+  {sub && <p class="sub">{sub}</p>}
+  {rows.length === 0 ? (
+    <p class="empty">{emptyText}</p>
+  ) : (
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>{dimension}</th>
+            <th class="num">Sessions</th>
+            <th class="num">Share</th>
+            <th class="num">Pages</th>
+            <th class="num">Avg. time</th>
+            <th class="num">Bounce</th>
+            {showConversions && <th class="num">Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr>
+              <td class="meter-cell">
+                <span class="meter">
+                  <span class="fill" style={`width:${Math.round((row.sessions / max) * 100)}%`}></span>
+                  <span class="txt">
+                    {filterKey && params ? (
+                      <a href={`${action}${queryString(params, { [filterKey]: row.key })}`}>{row.label}</a>
+                    ) : (
+                      row.label
+                    )}
+                  </span>
+                </span>
+              </td>
+              <td class="num">{row.sessions}</td>
+              <td class="num">{fmtPct(row.share, 1)}</td>
+              <td class="num">{(row.pageviews / Math.max(1, row.sessions)).toFixed(1)}</td>
+              <td class="num">{fmtDuration(row.avgDurationMs)}</td>
+              <td class="num">{fmtPct(row.bounceRate)}</td>
+              {showConversions && <td class="num">{row.conversions}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>

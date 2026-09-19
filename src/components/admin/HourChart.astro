@@ -1,0 +1,73 @@
+---
+/**
+ * Sessions by hour of the visitor's own local day.
+ *
+ * Local, not server time — "people open this at 7am and again at 11pm" is a
+ * publishing-schedule fact, and it's only true in their timezone. The hour
+ * comes from the browser's own Intl timezone where available, falling back to
+ * the timezone the edge infers from the IP.
+ *
+ * One series, so no legend: the title names it. Values sit above the bars
+ * rather than on a second axis.
+ */
+export interface Props {
+  hours: number[];
+  title?: string;
+  sub?: string;
+}
+
+const { hours, title = 'When people visit', sub } = Astro.props;
+
+const W = 1000;
+const H = 170;
+const PAD = { top: 18, right: 8, bottom: 24, left: 30 };
+const plotW = W - PAD.left - PAD.right;
+const plotH = H - PAD.top - PAD.bottom;
+const max = Math.max(1, ...hours);
+const total = hours.reduce((sum, h) => sum + h, 0);
+// 2px of surface between neighbouring bars, per the mark spec.
+const slot = plotW / 24;
+const barW = Math.max(4, slot - 4);
+const peak = hours.indexOf(max);
+---
+
+<div class="panel">
+  <h3>{title}</h3>
+  <p class="sub">{sub ?? "Visitor's local hour, not server time."}</p>
+  {total === 0 ? (
+    <p class="empty">No sessions in this window.</p>
+  ) : (
+    <>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sessions by local hour of day" class="hours">
+        <line x1={PAD.left} x2={W - PAD.right} y1={PAD.top + plotH} y2={PAD.top + plotH} stroke="var(--viz-grid)" stroke-width="1" vector-effect="non-scaling-stroke" />
+        {hours.map((count, hour) => {
+          const h = (count / max) * plotH;
+          const x = PAD.left + hour * slot + (slot - barW) / 2;
+          return (
+            <g>
+              <rect x={x} y={PAD.top + plotH - h} width={barW} height={Math.max(count > 0 ? 2 : 0, h)} rx="4" fill="var(--viz-1)">
+                <title>{`${String(hour).padStart(2, '0')}:00 — ${count} session${count === 1 ? '' : 's'}`}</title>
+              </rect>
+              {hour === peak && count > 0 && (
+                <text x={x + barW / 2} y={PAD.top + plotH - h - 6} text-anchor="middle" font-size="11" fill="var(--ink-soft)">{count}</text>
+              )}
+              {hour % 3 === 0 && (
+                <text x={x + barW / 2} y={H - 8} text-anchor="middle" font-size="10" fill="var(--ink-faint)">{String(hour).padStart(2, '0')}</text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <p class="sub">
+        Busiest hour: <strong>{String(peak).padStart(2, '0')}:00–{String((peak + 1) % 24).padStart(2, '0')}:00 local</strong> ({max} of {total} sessions).
+      </p>
+    </>
+  )}
+</div>
+
+<style>
+  .hours { width: 100%; height: auto; display: block; }
+  .hours rect { transition: opacity 0.12s; }
+  .hours:hover rect { opacity: 0.55; }
+  .hours rect:hover { opacity: 1; }
+</style>

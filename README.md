@@ -124,6 +124,60 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY----
 Firestore rules **deny all client access** (`firestore.rules` — apply in the
 Firebase console); every write goes through the Admin SDK.
 
+## Analytics
+
+First-party, no third-party tracker, no cookies. `src/scripts/analyticsTracker.ts`
+sends two beacons — `POST /api/analytics/hit` on every page load and
+`POST /api/analytics/session-end` once on the way out — and
+`src/lib/analytics/` enriches, classifies and stores them.
+
+| Piece | What it does |
+|---|---|
+| `ua.ts` | User-agent → browser / OS / device class, plus a named bot lookup (search, AI, SEO, social, monitoring, HTTP clients, headless). |
+| `sources.ts` | Referrer + UTM → channel (organic search, AI assistant, paid, social, email, referral, direct) and a display source. |
+| `request.ts` | Vercel edge geo headers, and the salted daily IP hash. **Raw IPs are never stored.** |
+| `bots.ts` | Three-layer bot verdict — self-declared UA, automation tells, behavioural implausibility — with the reasons kept for audit. |
+| `session.ts` | Validation of the public payloads, plus all Firestore writes. |
+| `query.ts` / `dashboard.ts` | Read side: range query, in-memory filtering and grouping, CSV export. |
+
+**Collections**
+
+- `analytics_sessions/<sessionId>` — one enriched document per visit. Written by
+  the hit (identity, geo, device, campaign) and completed by session-end
+  (duration, scroll, actions, page chain). Carries `expireAt` for TTL.
+- `analytics_daily/<YYYY-MM-DD>` — counter-only rollups that never expire, so
+  long-range totals survive session expiry.
+- `page_stats`, `entry_page_stats`, `referrer_stats`, `world_stats`,
+  `wallpaper_assets` — lifetime counters, as before. Bot traffic now lands in
+  separate fields (`botViews`, `botDwellMs`) instead of inflating the human ones.
+
+**Firebase setup** — already applied, recorded here so it isn't repeated:
+
+1. **TTL policy: done** (2026-09-19). `analytics_sessions` / `expireAt`, state
+   `ACTIVE` on project `motivewallpaper-220e4`. Session documents are deleted
+   ~120 days after they are written; `analytics_daily` rollups are untouched and
+   keep the long-range history. To inspect or change it: Firebase console →
+   Firestore → Time-to-live.
+2. No composite indexes are needed — every query is a single-field range plus an
+   `orderBy` on that same field.
+
+**Dashboards** (all Basic Auth, `noindex`):
+
+- `/admin/traffic` — sessions, acquisition, landing pages, page performance, actions.
+- `/admin/audience` — geography, device/browser/screen, and the bot-verdict audit
+  trail with a session explorer.
+- `/admin/content` — lifetime page and wallpaper totals.
+- `/admin/sessions.csv` — the current filter selection as raw rows.
+
+Filters are GET params (`range`, `from`, `to`, `quality`, `device`, `country`,
+`channel`, `source`, `landing`, `campaign`, `visitor`), so any view is a URL you
+can bookmark or share. `/admin/seo` redirects to `/admin/traffic`.
+
+**The honest caveats**, both surfaced in the UI: a crawler that doesn't execute
+JavaScript never reaches the tracker at all (so it is absent, not miscounted),
+and "Direct" includes every visit whose referrer the browser stripped, not just
+people typing the domain.
+
 ```bash
 curl -X POST http://localhost:4321/api/survey -H 'content-type: application/json' -d '{
   "age":"25–34","gender":"Male","life":"I'\''m building toward something big",

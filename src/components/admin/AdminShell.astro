@@ -1,0 +1,263 @@
+---
+/**
+ * The chrome every /admin screen sits in — document shell, tab nav, and the
+ * shared stylesheet for cards, tables, meters and charts.
+ *
+ * Kept as one component rather than a layout because the admin pages are
+ * deliberately outside the public site's BaseLayout: no fonts to load, no
+ * analytics tracking of the person reading the analytics, no chrome CSS.
+ */
+import '../../styles/tokens.css';
+
+export interface Props {
+  title: string;
+  heading: string;
+  sub?: string;
+  active: 'survey' | 'traffic' | 'audience' | 'content';
+  /** Current query string, carried across tabs so filters survive navigation. */
+  query?: string;
+}
+
+const { title, heading, sub, active, query = '' } = Astro.props;
+
+const TABS = [
+  { key: 'survey', href: '/admin', label: 'Survey & downloads', carries: false },
+  { key: 'traffic', href: '/admin/traffic', label: 'Traffic', carries: true },
+  { key: 'audience', href: '/admin/audience', label: 'Audience & tech', carries: true },
+  { key: 'content', href: '/admin/content', label: 'Content & wallpapers', carries: true },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+    <style>
+      /* ---- data-viz palette. Validated (CVD + contrast, both modes) with the
+         dataviz validator; the dark column is its own set of steps for the dark
+         surface, not an automatic flip. Series 1 = humans, 2 = suspected bots,
+         3 = confirmed bots — colour follows the entity, never its rank. ---- */
+      :root {
+        --viz-1: #2a78d6;
+        --viz-2: #eb6834;
+        --viz-3: #1baf7a;
+        --viz-grid: #e6e3dc;
+        --meter: #8f7142;
+        --meter-track: #f2f0eb;
+        --good: #1b7f4b;
+        --bad: #b4392f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --viz-1: #3987e5;
+          --viz-2: #d95926;
+          --viz-3: #199e70;
+          --viz-grid: #2a2b30;
+          --meter: #c7a56d;
+          --meter-track: #1e1f24;
+          --good: #58c08a;
+          --bad: #e88a80;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: var(--t-body-size);
+        line-height: var(--t-body-leading);
+        padding: 20px 20px 80px;
+      }
+      .wrap { max-width: 1400px; margin: 0 auto; }
+      h1 { font-size: var(--t-title1-size); margin: 0 0 2px; }
+      h2 {
+        font-size: var(--t-title2-size);
+        margin: 34px 0 4px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      h3 { font-size: 0.95rem; margin: 0 0 2px; font-weight: 600; }
+      .sub { color: var(--ink-soft); margin: 0 0 12px; font-size: var(--t-small-size); }
+      .hint { color: var(--ink-faint); font-size: var(--t-label-size); font-weight: 400; }
+      a { color: var(--accent-strong); }
+
+      nav.tabs {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin: 14px 0 18px;
+        border-bottom: 1px solid var(--hairline);
+      }
+      nav.tabs a {
+        color: var(--ink-soft);
+        text-decoration: none;
+        font-size: var(--t-small-size);
+        padding-bottom: 8px;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+      nav.tabs a.active { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+
+      /* ---- cards ---- */
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: var(--r-m);
+        padding: 12px 14px;
+      }
+      .card .n { font-size: 1.6rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+      .card .l {
+        font-size: var(--t-label-size);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        margin-bottom: 4px;
+      }
+      .card .d { font-size: var(--t-label-size); color: var(--ink-soft); margin-top: 3px; }
+      .card .d .up { color: var(--good); }
+      .card .d .down { color: var(--bad); }
+      .card .note { font-size: var(--t-label-size); color: var(--ink-faint); margin-top: 3px; }
+
+      /* ---- panels & grid ---- */
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+      .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 18px; }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: var(--r-m);
+        padding: 14px 16px 6px;
+        overflow: hidden;
+      }
+      .panel > h3 + .sub { margin-bottom: 10px; }
+
+      /* ---- tables ---- */
+      .scroll { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: var(--t-small-size); }
+      th, td { text-align: left; padding: 7px 10px 7px 0; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+      th {
+        font-size: var(--t-label-size);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-faint);
+        font-weight: 600;
+      }
+      td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; padding-right: 10px; }
+      tr:last-child td { border-bottom: none; }
+      td.wide { white-space: normal; max-width: 420px; }
+      .mono { font-family: var(--font-mono); font-size: var(--t-mono-size); }
+      .muted { color: var(--ink-faint); }
+
+      /* Magnitude meter behind a label — one hue, width is the only variable. */
+      .meter-cell { min-width: 180px; }
+      .meter {
+        position: relative;
+        display: block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--meter-track);
+      }
+      .meter .fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--meter);
+        opacity: 0.25;
+      }
+      .meter .txt { position: relative; }
+
+      /* ---- filter bar ---- */
+      form.filters {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--hairline);
+        border-radius: var(--r-m);
+        padding: 12px 14px;
+        margin-bottom: 14px;
+      }
+      form.filters label { display: flex; flex-direction: column; font-size: var(--t-label-size); color: var(--ink-soft); gap: 4px; }
+      select, input, button, .btn {
+        font: inherit;
+        font-size: var(--t-small-size);
+        padding: 6px 9px;
+        border-radius: var(--r-s);
+        border: 1px solid var(--hairline-strong);
+        background: var(--surface);
+        color: var(--ink);
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+      button[type='submit'] { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+      .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+      .chip {
+        font-size: var(--t-label-size);
+        background: var(--accent-soft);
+        border: 1px solid var(--hairline-strong);
+        border-radius: var(--r-pill);
+        padding: 3px 10px;
+        text-decoration: none;
+        color: var(--ink);
+      }
+
+      /* ---- quality badges: never colour alone, always the word too ---- */
+      .badge {
+        display: inline-block;
+        font-size: var(--t-label-size);
+        border-radius: var(--r-pill);
+        padding: 1px 8px;
+        border: 1px solid var(--hairline-strong);
+      }
+      .badge.human { border-color: var(--viz-1); color: var(--viz-1); }
+      .badge.suspect { border-color: var(--viz-2); color: var(--viz-2); }
+      .badge.bot { border-color: var(--viz-3); color: var(--viz-3); }
+
+      .empty { color: var(--ink-faint); padding: 14px 0; font-style: italic; font-size: var(--t-small-size); }
+      .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: var(--t-label-size); color: var(--ink-soft); margin-bottom: 6px; }
+      .legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+      .thumb { width: 40px; height: 56px; object-fit: cover; border-radius: 5px; vertical-align: middle; }
+
+      details.explain {
+        margin: 10px 0 0;
+        font-size: var(--t-small-size);
+        color: var(--ink-soft);
+        background: var(--surface-2);
+        border-radius: var(--r-s);
+        padding: 8px 12px;
+      }
+      details.explain summary { cursor: pointer; color: var(--ink); font-size: var(--t-label-size); text-transform: uppercase; letter-spacing: 0.06em; }
+      details.explain p { margin: 8px 0 4px; max-width: 78ch; }
+      details.explain li { max-width: 78ch; margin-bottom: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>{heading}</h1>
+      <p class="sub">{sub ?? 'Internal, read-only. Not indexed.'}</p>
+      <nav class="tabs">
+        {TABS.map((tab) => (
+          <a href={tab.carries ? `${tab.href}${query}` : tab.href} class={tab.key === active ? 'active' : undefined}>
+            {tab.label}
+          </a>
+        ))}
+      </nav>
+      <slot />
+    </div>
+  </body>
+</html>

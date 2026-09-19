@@ -1,0 +1,45 @@
+---
+/**
+ * The KPI strip. Each card carries its number, an optional comparison against
+ * the previous window of the same length, and a one-line note saying what the
+ * number actually means — because "bounce rate: 62%" is only useful if you know
+ * which definition of bounce produced it.
+ */
+export interface Stat {
+  label: string;
+  value: string;
+  delta?: { text: string; direction: 'up' | 'down' | 'flat' };
+  /** Set false where a rise is bad (bounce rate), so the arrow colour is honest. */
+  higherIsBetter?: boolean;
+  note?: string;
+}
+
+export interface Props {
+  stats: Stat[];
+}
+
+const { stats } = Astro.props;
+
+const toneOf = (stat: Stat): string => {
+  if (!stat.delta || stat.delta.direction === 'flat') return '';
+  const good = stat.higherIsBetter === false ? stat.delta.direction === 'down' : stat.delta.direction === 'up';
+  return good ? 'up' : 'down';
+};
+const ARROW = { up: '▲', down: '▼', flat: '' } as const;
+---
+
+<div class="cards">
+  {stats.map((stat) => (
+    <div class="card">
+      <div class="l">{stat.label}</div>
+      <div class="n">{stat.value}</div>
+      {stat.delta && (
+        <div class="d">
+          <span class={toneOf(stat)}>{ARROW[stat.delta.direction]} {stat.delta.text}</span>
+          <span class="muted"> vs. previous period</span>
+        </div>
+      )}
+      {stat.note && <div class="note">{stat.note}</div>}
+    </div>
+  ))}
+</div>

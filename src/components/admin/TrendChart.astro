@@ -1,0 +1,181 @@
+---
+/**
+ * Sessions per day, one line per traffic class.
+ *
+ * Inline SVG, no chart library: the data is a couple of hundred points at most
+ * and shipping a bundle to draw three polylines would be silly. One y-axis
+ * only — sessions. Pageviews live in their own card rather than being crammed
+ * onto a second scale, which is the fastest way to make a chart lie.
+ *
+ * Every series is direct-labelled at its end as well as being in the legend, so
+ * identity never rests on colour alone, and the underlying numbers are one
+ * click away in the table view below.
+ */
+import type { DayPoint } from '../../lib/analytics/query';
+
+export interface Props {
+  points: DayPoint[];
+  /** Include the bot/suspect lines. Off when the view is already humans-only… */
+  showQuality?: boolean;
+  height?: number;
+}
+
+const { points, showQuality = true, height = 240 } = Astro.props;
+
+const W = 1000;
+const H = height;
+const PAD = { top: 16, right: 58, bottom: 26, left: 44 };
+const plotW = W - PAD.left - PAD.right;
+const plotH = H - PAD.top - PAD.bottom;
+
+const series = [
+  { key: 'humans' as const, label: 'Humans', color: 'var(--viz-1)' },
+  ...(showQuality
+    ? [
+        { key: 'suspects' as const, label: 'Suspected bots', color: 'var(--viz-2)' },
+        { key: 'bots' as const, label: 'Bots', color: 'var(--viz-3)' },
+      ]
+    : []),
+];
+
+const maxValue = Math.max(1, ...points.flatMap((p) => series.map((s) => p[s.key])));
+// Round the axis top to something a person would choose.
+const step = Math.max(1, Math.ceil(maxValue / 4));
+const axisTop = step * 4;
+
+const x = (i: number) => PAD.left + (points.length <= 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+const y = (v: number) => PAD.top + plotH - (v / axisTop) * plotH;
+
+const paths = series.map((s) => ({
+  ...s,
+  d: points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(' '),
+  last: points.length > 0 ? points[points.length - 1][s.key] : 0,
+  lastY: points.length > 0 ? y(points[points.length - 1][s.key]) : 0,
+}));
+
+const ticks = [0, step, step * 2, step * 3, axisTop];
+const xLabelIdx = points.length <= 1 ? [0] : [0, Math.floor((points.length - 1) / 2), points.length - 1];
+const shortDay = (day: string) => `${day.slice(8, 10)} ${new Date(`${day}T00:00:00Z`).toLocaleString('en', { month: 'short', timeZone: 'UTC' })}`;
+const chartId = `trend-${Math.random().toString(36).slice(2, 8)}`;
+const totalSessions = points.reduce((sum, p) => sum + p.humans + p.suspects + p.bots, 0);
+---
+
+<div class="chart" id={chartId}>
+  <div class="legend">
+    {paths.map((s) => (
+      <span><i class="swatch" style={`background:${s.color}`}></i>{s.label}</span>
+    ))}
+  </div>
+
+  {totalSessions === 0 ? (
+    <p class="empty">No sessions recorded in this window yet.</p>
+  ) : (
+    <div class="chart-body">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sessions per day" preserveAspectRatio="none">
+        {ticks.map((t) => (
+          <>
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--viz-grid)" stroke-width="1" vector-effect="non-scaling-stroke" />
+            <text x={PAD.left - 8} y={y(t) + 4} text-anchor="end" font-size="11" fill="var(--ink-faint)">{t}</text>
+          </>
+        ))}
+        {xLabelIdx.map((i) => (
+          <text x={x(i)} y={H - 8} text-anchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'} font-size="11" fill="var(--ink-faint)">
+            {points[i] ? shortDay(points[i].day) : ''}
+          </text>
+        ))}
+        {paths.map((s) => (
+          <path d={s.d} fill="none" stroke={s.color} stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+        ))}
+        {paths.map((s) => (
+          <text x={W - PAD.right + 8} y={s.lastY + 4} font-size="11" fill="var(--ink-soft)">{s.last}</text>
+        ))}
+        <line class="crosshair" x1="0" x2="0" y1={PAD.top} y2={PAD.top + plotH} stroke="var(--ink-faint)" stroke-width="1" vector-effect="non-scaling-stroke" style="display:none" />
+      </svg>
+      <div class="tip" hidden></div>
+    </div>
+  )}
+
+  <details class="explain">
+    <summary>Table view</summary>
+    <div class="scroll" style="max-height:260px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr><th>Day</th><th class="num">Humans</th>{showQuality && <th class="num">Suspected</th>}{showQuality && <th class="num">Bots</th>}<th class="num">Pageviews</th><th class="num">Sessions w/ action</th></tr>
+        </thead>
+        <tbody>
+          {[...points].reverse().map((p) => (
+            <tr>
+              <td class="mono">{p.day}</td>
+              <td class="num">{p.humans}</td>
+              {showQuality && <td class="num">{p.suspects}</td>}
+              {showQuality && <td class="num">{p.bots}</td>}
+              <td class="num">{p.pageviews}</td>
+              <td class="num">{p.conversions}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</div>
+
+<script is:inline define:vars={{ chartId, points, series: series.map((s) => ({ key: s.key, label: s.label, color: s.color })), PAD, W, plotW }}>
+  // Crosshair + tooltip. Pointer x is mapped back through the viewBox scale to
+  // a day index, so the hit target is the whole column, not the 2px line.
+  (() => {
+    const root = document.getElementById(chartId);
+    const svg = root?.querySelector('svg');
+    const tip = root?.querySelector('.tip');
+    const cross = root?.querySelector('.crosshair');
+    if (!root || !svg || !tip || !cross || points.length === 0) return;
+
+    const show = (event) => {
+      const box = svg.getBoundingClientRect();
+      const scale = W / box.width;
+      const svgX = (event.clientX - box.left) * scale;
+      const ratio = points.length <= 1 ? 0 : (svgX - PAD.left) / plotW;
+      const index = Math.max(0, Math.min(points.length - 1, Math.round(ratio * (points.length - 1))));
+      const point = points[index];
+      const lineX = points.length <= 1 ? PAD.left + plotW / 2 : PAD.left + (index / (points.length - 1)) * plotW;
+      cross.setAttribute('x1', lineX);
+      cross.setAttribute('x2', lineX);
+      cross.style.display = '';
+      tip.hidden = false;
+      tip.innerHTML =
+        `<strong>${point.day}</strong>` +
+        series.map((s) => `<span><i style="background:${s.color}"></i>${s.label}: <b>${point[s.key]}</b></span>`).join('') +
+        `<span class="muted">${point.pageviews} pageviews · ${point.conversions} with an action</span>`;
+      const left = Math.min(Math.max((lineX / scale) - 70, 0), box.width - 170);
+      tip.style.left = `${left}px`;
+    };
+
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerleave', () => {
+      tip.hidden = true;
+      cross.style.display = 'none';
+    });
+  })();
+</script>
+
+<style>
+  .chart { position: relative; }
+  .chart-body { position: relative; }
+  .chart svg { width: 100%; height: auto; display: block; touch-action: none; }
+  .tip {
+    position: absolute;
+    top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--r-s);
+    padding: 7px 10px;
+    font-size: var(--t-label-size);
+    line-height: 1.5;
+    pointer-events: none;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+    min-width: 170px;
+  }
+  .tip strong { display: block; margin-bottom: 3px; }
+  .tip span { display: flex; align-items: center; gap: 5px; }
+  .tip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .tip .muted { color: var(--ink-faint); margin-top: 3px; display: block; }
+</style>

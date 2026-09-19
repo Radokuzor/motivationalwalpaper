@@ -1,0 +1,265 @@
+---
+/**
+ * /admin/content — which pages and which wallpapers are doing the work.
+ *
+ * Unlike the traffic and audience screens, the tables here are *lifetime*
+ * counters (page_stats, wallpaper_assets, world_stats), incremented as events
+ * happen. They outlive raw-session retention and never miss a view to a dropped
+ * exit beacon, at the cost of not being filterable by date. The date-filtered
+ * version of the page table lives on /admin/traffic.
+ */
+export const prerender = false;
+
+import AdminShell from '../../components/admin/AdminShell.astro';
+import { requireBasicAuth } from '../../lib/adminAuth';
+
+const denied = requireBasicAuth(Astro.request);
+if (denied) return denied;
+
+import {
+  fetchTopPages,
+  fetchEntryPages,
+  fetchTrafficSources,
+  fetchWorldStats,
+  fetchMostViewedAssets,
+  fetchMostDwelledAssets,
+  fetchTopAssets,
+} from '../../lib/adminData';
+import { fmtDuration, fmtPct, queryString } from '../../lib/analytics/dashboard';
+
+const query = queryString(Astro.url.searchParams);
+
+let fetchError: string | null = null;
+let topPages: Awaited<ReturnType<typeof fetchTopPages>> = [];
+let entryPages: Awaited<ReturnType<typeof fetchEntryPages>> = [];
+let sources: Awaited<ReturnType<typeof fetchTrafficSources>> = [];
+let worlds: Awaited<ReturnType<typeof fetchWorldStats>> = [];
+let mostViewed: Awaited<ReturnType<typeof fetchMostViewedAssets>> = [];
+let mostDwelled: Awaited<ReturnType<typeof fetchMostDwelledAssets>> = [];
+let mostDownloaded: Awaited<ReturnType<typeof fetchTopAssets>> = [];
+
+try {
+  [topPages, entryPages, sources, worlds, mostViewed, mostDwelled, mostDownloaded] = await Promise.all([
+    fetchTopPages(40),
+    fetchEntryPages(25),
+    fetchTrafficSources(25),
+    fetchWorldStats(),
+    fetchMostViewedAssets(20),
+    fetchMostDwelledAssets(20),
+    fetchTopAssets(20),
+  ]);
+} catch (err) {
+  console.error('content dashboard query failed', err);
+  fetchError = err instanceof Error ? err.message : 'Unknown error';
+}
+
+const avgDwell = (dwellMs: number, views: number) => (views > 0 ? fmtDuration(dwellMs / views) : '—');
+const totalDownloads = worlds.reduce((sum, w) => sum + w.downloads, 0);
+const totalWorldViews = worlds.reduce((sum, w) => sum + w.views, 0);
+---
+
+<AdminShell
+  title="Admin — content & wallpapers — motivationalwallpaper.com"
+  heading="Content & wallpapers"
+  sub="Lifetime totals, not date-filtered. For a windowed view of pages, use the Traffic tab."
+  active="content"
+  query={query}
+>
+  {fetchError && <p class="empty">Could not read analytics: {fetchError}.</p>}
+
+  <h2>Pages <span class="hint">every page load since tracking began</span></h2>
+  <div class="panel">
+    <h3>All pages by views</h3>
+    <p class="sub">
+      Bot loads are counted in their own column and never included in Views. A page with more bot loads than human
+      ones is being crawled but not found — usually a distribution problem, not a content one.
+    </p>
+    {topPages.length === 0 ? (
+      <p class="empty">No page views recorded yet.</p>
+    ) : (
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Page</th>
+              <th class="num">Views</th>
+              <th class="num">Avg. time</th>
+              <th class="num">Avg. scroll</th>
+              <th class="num">Exits</th>
+              <th class="num">Bot loads</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topPages.map((page) => (
+              <tr>
+                <td>
+                  <a href={page.path} target="_blank" rel="noreferrer">{page.path}</a>
+                  {page.title && <div class="muted" style="font-size:var(--t-label-size)">{page.title}</div>}
+                </td>
+                <td class="num">{page.views}</td>
+                <td class="num">{avgDwell(page.dwellMs, page.views)}</td>
+                <td class="num">{page.avgScrollPct > 0 ? fmtPct(page.avgScrollPct / 100) : '—'}</td>
+                <td class="num">{page.exits}</td>
+                <td class="num muted">{page.botViews}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <div class="grid" style="margin-top:18px">
+    <div class="panel">
+      <h3>Lifetime entry points</h3>
+      <p class="sub">First page of a session, all time.</p>
+      {entryPages.length === 0 ? (
+        <p class="empty">No sessions recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Page</th><th class="num">Sessions</th></tr></thead>
+            <tbody>
+              {entryPages.map((e) => (
+                <tr><td>{e.path}</td><td class="num">{e.sessions}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <div class="panel">
+      <h3>Lifetime referring domains</h3>
+      <p class="sub">Human sessions only. "direct" means the browser sent no referrer.</p>
+      {sources.length === 0 ? (
+        <p class="empty">No sessions recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Domain</th><th class="num">Sessions</th></tr></thead>
+            <tbody>
+              {sources.map((s) => (
+                <tr><td>{s.bucket === 'direct' ? 'Direct / no referrer' : s.bucket}</td><td class="num">{s.sessions}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <h2>Categories</h2>
+  <div class="panel">
+    <h3>By downloads and time on screen</h3>
+    <p class="sub">
+      Views count each time a wallpaper from that category became the one on screen. Download-per-view is the
+      honest measure of which category actually converts attention into a saved wallpaper.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="num">Downloads</th>
+            <th class="num">Views</th>
+            <th class="num">Downloads / view</th>
+            <th class="num">Avg. time on screen</th>
+            <th class="num">Total time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {worlds.map((w) => (
+            <tr>
+              <td>{w.name}</td>
+              <td class="num">{w.downloads}</td>
+              <td class="num">{w.views}</td>
+              <td class="num">{w.views > 0 ? fmtPct(w.downloads / w.views, 1) : '—'}</td>
+              <td class="num">{avgDwell(w.dwellMs, w.views)}</td>
+              <td class="num">{fmtDuration(w.dwellMs)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="sub">{totalDownloads} downloads across {totalWorldViews} wallpaper views, all time.</p>
+  </div>
+
+  <h2>Wallpapers</h2>
+  <div class="grid-2">
+    <div class="panel">
+      <h3>Most viewed</h3>
+      <p class="sub">Counted every time this photo became the one on screen in the reel or category grid.</p>
+      {mostViewed.length === 0 ? (
+        <p class="empty">No wallpaper views recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Preview</th><th>Categories</th><th class="num">Views</th><th class="num">Avg. on screen</th><th class="num">Downloads</th></tr></thead>
+            <tbody>
+              {mostViewed.map((a) => (
+                <tr>
+                  <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+                  <td>{a.worlds.join(', ') || '—'}</td>
+                  <td class="num">{a.views}</td>
+                  <td class="num">{avgDwell(a.dwellMs, a.views)}</td>
+                  <td class="num">{a.downloads}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <div class="panel">
+      <h3>Most lingered on</h3>
+      <p class="sub">Total time on screen summed across every visitor — not the most seen, the most held.</p>
+      {mostDwelled.length === 0 ? (
+        <p class="empty">No wallpaper views recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Preview</th><th>Categories</th><th class="num">Total time</th><th class="num">Views</th></tr></thead>
+            <tbody>
+              {mostDwelled.map((a) => (
+                <tr>
+                  <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+                  <td>{a.worlds.join(', ') || '—'}</td>
+                  <td class="num">{fmtDuration(a.dwellMs)}</td>
+                  <td class="num">{a.views}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <div class="panel">
+      <h3>Most downloaded</h3>
+      <p class="sub">The end of the funnel. Compare against "most viewed" — a wallpaper high in one and low in the other is telling you something.</p>
+      {mostDownloaded.length === 0 ? (
+        <p class="empty">No downloads recorded yet.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Preview</th><th>Categories</th><th>Preferred</th><th class="num">Downloads</th><th class="num">Views</th><th class="num">Rate</th></tr></thead>
+            <tbody>
+              {mostDownloaded.map((a) => (
+                <tr>
+                  <td>{a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : '—'}</td>
+                  <td>{a.worlds.join(', ') || '—'}</td>
+                  <td>{a.preferred ? '★' : ''}</td>
+                  <td class="num">{a.downloads}</td>
+                  <td class="num">{a.views}</td>
+                  <td class="num">{a.views > 0 ? fmtPct(a.downloads / a.views, 1) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+</AdminShell>

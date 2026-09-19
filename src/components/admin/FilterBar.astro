@@ -1,0 +1,150 @@
+---
+/**
+ * The one row of controls that governs every number on the page.
+ *
+ * All filters are GET params, so the view is fully described by its URL. The
+ * active ones also render as removable chips underneath — without that, a
+ * filtered dashboard looks exactly like an empty one, which is how people end
+ * up drawing conclusions from a slice they forgot they were in.
+ */
+import { QUALITY_OPTIONS, VISITOR_OPTIONS, RANGE_PRESETS, queryString, countryLabel, DEVICE_LABELS } from '../../lib/analytics/dashboard';
+import { CHANNEL_LABELS } from '../../lib/analytics/sources';
+import type { SessionFilters } from '../../lib/analytics/query';
+import type { DateRange } from '../../lib/analytics/dashboard';
+
+export interface Props {
+  range: DateRange;
+  filters: SessionFilters;
+  params: URLSearchParams;
+  options: {
+    countries: string[];
+    devices: string[];
+    channels: string[];
+    sources: string[];
+    landings: string[];
+    campaigns: string[];
+  };
+  /** Path this form posts back to (the current page). */
+  action: string;
+  /** Href for the CSV export of the current selection. */
+  exportHref?: string;
+}
+
+const { range, filters, params, options, action, exportHref } = Astro.props;
+
+const chips: Array<{ label: string; key: string }> = [];
+if (filters.quality !== 'human') chips.push({ label: QUALITY_OPTIONS.find((q) => q.value === filters.quality)?.label ?? filters.quality, key: 'quality' });
+if (filters.device) chips.push({ label: `Device: ${DEVICE_LABELS[filters.device] ?? filters.device}`, key: 'device' });
+if (filters.country) chips.push({ label: `Country: ${countryLabel(filters.country)}`, key: 'country' });
+if (filters.channel) chips.push({ label: `Channel: ${CHANNEL_LABELS[filters.channel as keyof typeof CHANNEL_LABELS] ?? filters.channel}`, key: 'channel' });
+if (filters.source) chips.push({ label: `Source: ${filters.source}`, key: 'source' });
+if (filters.landing) chips.push({ label: `Landed on: ${filters.landing}`, key: 'landing' });
+if (filters.campaign) chips.push({ label: `Campaign: ${filters.campaign}`, key: 'campaign' });
+if (filters.visitor) chips.push({ label: VISITOR_OPTIONS.find((v) => v.value === filters.visitor)?.label ?? filters.visitor, key: 'visitor' });
+
+const clearHref = `${action}${queryString(params, { device: '', country: '', channel: '', source: '', landing: '', campaign: '', visitor: '', quality: 'human' })}`;
+---
+
+<form class="filters" method="get" action={action}>
+  <label>
+    Date range
+    <select name="range">
+      {RANGE_PRESETS.map((r) => (
+        <option value={r.value} selected={range.preset === r.value}>{r.label}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    From
+    <input type="date" name="from" value={range.fromDay} />
+  </label>
+  <label>
+    To
+    <input type="date" name="to" value={range.toDay} />
+  </label>
+  <label>
+    Traffic quality
+    <select name="quality">
+      {QUALITY_OPTIONS.map((q) => (
+        <option value={q.value} selected={filters.quality === q.value}>{q.label}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Device
+    <select name="device">
+      <option value="">All devices</option>
+      {options.devices.map((d) => (
+        <option value={d} selected={filters.device === d}>{DEVICE_LABELS[d] ?? d}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Country
+    <select name="country">
+      <option value="">All countries</option>
+      {options.countries.map((c) => (
+        <option value={c} selected={filters.country === c}>{countryLabel(c)}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Channel
+    <select name="channel">
+      <option value="">All channels</option>
+      {options.channels.map((c) => (
+        <option value={c} selected={filters.channel === c}>{CHANNEL_LABELS[c as keyof typeof CHANNEL_LABELS] ?? c}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Source
+    <select name="source">
+      <option value="">All sources</option>
+      {options.sources.map((s) => (
+        <option value={s} selected={filters.source === s}>{s}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Landing page
+    <select name="landing">
+      <option value="">Any landing page</option>
+      {options.landings.map((l) => (
+        <option value={l} selected={filters.landing === l}>{l}</option>
+      ))}
+    </select>
+  </label>
+  <label>
+    Visitor
+    <select name="visitor">
+      {VISITOR_OPTIONS.map((v) => (
+        <option value={v.value} selected={filters.visitor === v.value}>{v.label}</option>
+      ))}
+    </select>
+  </label>
+  {options.campaigns.length > 0 && (
+    <label>
+      Campaign
+      <select name="campaign">
+        <option value="">All campaigns</option>
+        {options.campaigns.map((c) => (
+          <option value={c} selected={filters.campaign === c}>{c}</option>
+        ))}
+      </select>
+    </label>
+  )}
+  <button type="submit">Apply</button>
+  {exportHref && <a class="btn" href={exportHref}>Export CSV</a>}
+</form>
+
+{chips.length > 0 && (
+  <div class="chips">
+    {chips.map((chip) => (
+      <a class="chip" href={`${action}${queryString(params, { [chip.key]: chip.key === 'quality' ? 'human' : '' })}`}>
+        {chip.label} ✕
+      </a>
+    ))}
+    <a class="chip" href={clearHref}>Clear all filters</a>
+  </div>
+)}

@@ -223,19 +223,36 @@ export async function fetchMostDwelledAssets(limit = 20): Promise<TopAsset[]> {
 
 export interface PageStat {
   path: string;
+  title: string | null;
   views: number;
   dwellMs: number;
+  /** Bot page loads, counted separately so they never inflate `views`. */
+  botViews: number;
+  /** Mean of each visit's deepest scroll point, 0–100. */
+  avgScrollPct: number;
+  /** Sessions that ended on this page. */
+  exits: number;
 }
 
-/** Top pages by view count (src/pages/api/analytics/session-end.ts writes these). */
+/**
+ * Lifetime page totals — these counters are incremented on every page load by
+ * /api/analytics/hit, so unlike the session-based dashboards they survive raw
+ * session expiry and never miss a view to a dropped exit beacon.
+ */
 export async function fetchTopPages(limit = 20): Promise<PageStat[]> {
   const snap = await db.collection('page_stats').orderBy('views', 'desc').limit(limit).get();
   return snap.docs.map((doc) => {
     const d = doc.data();
+    const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+    const samples = num(d.scrollSamples);
     return {
       path: typeof d.path === 'string' ? d.path : doc.id,
-      views: typeof d.views === 'number' ? d.views : 0,
-      dwellMs: typeof d.dwellMs === 'number' ? d.dwellMs : 0,
+      title: typeof d.title === 'string' ? d.title : null,
+      views: num(d.views),
+      dwellMs: num(d.dwellMs),
+      botViews: num(d.botViews),
+      avgScrollPct: samples > 0 ? num(d.scrollPctSum) / samples : 0,
+      exits: num(d.exits),
     };
   });
 }

@@ -1,0 +1,315 @@
+---
+/**
+ * /admin/traffic — how many people came, where from, and what they did.
+ *
+ * Everything on this page is computed from the raw session documents for the
+ * selected window, so any filter combination is valid and the numbers always
+ * agree with each other. The previous window of the same length is fetched in
+ * the same query and used for the comparison on every KPI.
+ */
+export const prerender = false;
+
+import AdminShell from '../../components/admin/AdminShell.astro';
+import FilterBar from '../../components/admin/FilterBar.astro';
+import StatCards from '../../components/admin/StatCards.astro';
+import TrendChart from '../../components/admin/TrendChart.astro';
+import HourChart from '../../components/admin/HourChart.astro';
+import BreakdownTable from '../../components/admin/BreakdownTable.astro';
+import { requireBasicAuth } from '../../lib/adminAuth';
+
+const denied = requireBasicAuth(Astro.request);
+if (denied) return denied;
+
+import {
+  fetchSessions,
+  applyFilters,
+  computeKpis,
+  breakdown,
+  pageBreakdown,
+  dailySeries,
+  hourHistogram,
+  actionCounts,
+  filterOptions,
+  CHANNEL_LABELS,
+} from '../../lib/analytics/query';
+import {
+  parseRange,
+  parseFilters,
+  queryString,
+  fmtDuration,
+  fmtPct,
+  fmtNumber,
+  fmtDelta,
+} from '../../lib/analytics/dashboard';
+
+const params = Astro.url.searchParams;
+const range = parseRange(params);
+const filters = parseFilters(params);
+const query = queryString(params);
+const action = '/admin/traffic';
+
+// One query covers this window *and* the comparison window behind it.
+let fetchError: string | null = null;
+let everything: Awaited<ReturnType<typeof fetchSessions>> = [];
+try {
+  everything = await fetchSessions({ fromMs: range.prevFromMs, toMs: range.toMs });
+} catch (err) {
+  console.error('traffic dashboard query failed', err);
+  fetchError = err instanceof Error ? err.message : 'Unknown error';
+}
+
+const inWindow = everything.filter((s) => s.startedAt >= range.fromMs);
+const previous = everything.filter((s) => s.startedAt < range.fromMs);
+
+const rows = applyFilters(inWindow, filters);
+const prevRows = applyFilters(previous, filters);
+const kpis = computeKpis(rows, inWindow);
+const prevKpis = computeKpis(prevRows, previous);
+
+const points = dailySeries(applyFilters(inWindow, { ...filters, quality: 'all' }), range.fromMs, range.toMs);
+const options = filterOptions(inWindow);
+const actions = actionCounts(rows);
+const pages = pageBreakdown(rows, 25);
+const exportHref = `/admin/sessions.csv${query}`;
+
+const stats = [
+  {
+    label: 'Sessions',
+    value: fmtNumber(kpis.sessions),
+    delta: fmtDelta(kpis.sessions, prevKpis.sessions),
+    note: `${fmtPct(kpis.botShare)} of all traffic this window was bot`,
+  },
+  {
+    label: 'Unique visitors',
+    value: fmtNumber(kpis.visitors),
+    delta: fmtDelta(kpis.visitors, prevKpis.visitors),
+    note: `${fmtPct(kpis.newVisitorShare)} first-time`,
+  },
+  {
+    label: 'Page views',
+    value: fmtNumber(kpis.pageviews),
+    delta: fmtDelta(kpis.pageviews, prevKpis.pageviews),
+    note: `${kpis.pagesPerSession.toFixed(1)} pages per session`,
+  },
+  {
+    label: 'Avg. session',
+    value: fmtDuration(kpis.avgDurationMs),
+    delta: fmtDelta(kpis.avgDurationMs, prevKpis.avgDurationMs),
+    note: `median ${fmtDuration(kpis.medianDurationMs)}`,
+  },
+  {
+    label: 'Engaged sessions',
+    value: fmtPct(kpis.engagementRate),
+    delta: fmtDelta(kpis.engagementRate, prevKpis.engagementRate),
+    note: '>10s, 2+ pages, or an action',
+  },
+  {
+    label: 'Bounce rate',
+    value: fmtPct(kpis.bounceRate),
+    delta: fmtDelta(kpis.bounceRate, prevKpis.bounceRate),
+    higherIsBetter: false,
+    note: 'one page, under 10s, no action',
+  },
+  {
+    label: 'Avg. scroll depth',
+    value: fmtPct(kpis.avgScrollPct / 100),
+    delta: fmtDelta(kpis.avgScrollPct, prevKpis.avgScrollPct),
+    note: 'deepest point reached',
+  },
+  {
+    label: 'Sessions with an action',
+    value: `${kpis.actionSessions}`,
+    delta: fmtDelta(kpis.conversionRate, prevKpis.conversionRate),
+    note: `${fmtPct(kpis.conversionRate, 1)} of sessions`,
+  },
+];
+---
+
+<AdminShell
+  title="Admin — traffic — motivationalwallpaper.com"
+  heading="Traffic"
+  sub={`${range.label} · ${range.fromDay} → ${range.toDay} · internal, read-only`}
+  active="traffic"
+  query={query}
+>
+  <FilterBar range={range} filters={filters} params={params} options={options} action={action} exportHref={exportHref} />
+
+  {fetchError && (
+    <p class="empty">Could not read analytics: {fetchError}. Check the Firebase credentials in the environment.</p>
+  )}
+
+  <StatCards stats={stats} />
+
+  <details class="explain">
+    <summary>How to read this page</summary>
+    <p>
+      Every number here is <strong>{filters.quality === 'human' ? 'humans only' : filters.quality === 'bot' ? 'confirmed bots only' : filters.quality === 'suspect' ? 'suspected bots only' : filters.quality === 'humans_and_suspects' ? 'humans plus suspected bots' : 'every visit, unfiltered'}</strong>
+      — change that with the "Traffic quality" filter. Comparisons are against the
+      immediately preceding window of the same length ({range.days} days).
+    </p>
+    <ul>
+      <li><strong>Sessions</strong> — one visit. A visit ends when the tab closes or goes idle; returning tomorrow is a new session.</li>
+      <li><strong>Unique visitors</strong> — distinct browsers, counted with a first-party id in local storage. Clearing site data or switching device makes one person look like two.</li>
+      <li><strong>Engaged / bounce</strong> — GA4's definitions, so they are comparable to anything you read elsewhere: engaged means over ten seconds, or more than one page, or a tracked action.</li>
+      <li><strong>Direct / untagged</strong> traffic is not all people typing the domain. Browsers routinely strip the referrer — from apps, from HTTPS-to-HTTP hops, from links marked <code>noreferrer</code>. Tag your own links with <code>?utm_source=</code> and that ambiguity disappears for the ones you control.</li>
+      <li>Click any row in a breakdown table to filter the whole dashboard to it.</li>
+    </ul>
+  </details>
+
+  <h2>Sessions per day <span class="hint">all traffic classes, so you can see bot spikes for what they are</span></h2>
+  <div class="panel">
+    <TrendChart points={points} showQuality={true} />
+  </div>
+
+  <h2>Where the traffic comes from</h2>
+  <div class="grid">
+    <BreakdownTable
+      title="Channel"
+      sub="The big picture: search, social, AI assistants, referral, direct."
+      dimension="Channel"
+      rows={breakdown(rows, (r) => r.channel, (k) => CHANNEL_LABELS[k as keyof typeof CHANNEL_LABELS] ?? k)}
+      filterKey="channel"
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Source"
+      sub="The specific site or engine — the row you act on."
+      dimension="Source"
+      rows={breakdown(rows, (r) => r.source, (k) => k, 20)}
+      filterKey="source"
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Referring domain"
+      sub="Raw hostname, for the long tail the source names miss."
+      dimension="Domain"
+      rows={breakdown(rows, (r) => r.referrerHost, (k) => k, 20)}
+      emptyText="Every session in this window arrived without a referrer."
+      filterKey="source"
+      params={params}
+      action={action}
+    />
+    <BreakdownTable
+      title="Campaigns"
+      sub="utm_campaign on the landing URL. Empty means you have not tagged any links yet."
+      dimension="Campaign"
+      rows={breakdown(rows, (r) => r.campaign, (k) => k, 20)}
+      emptyText="No tagged campaigns in this window. Add ?utm_source=…&utm_campaign=… to links you post."
+      filterKey="campaign"
+      params={params}
+      action={action}
+    />
+  </div>
+
+  <h2>Landing pages <span class="hint">the first page of a session — what the internet is actually sending people to</span></h2>
+  <BreakdownTable
+    title="Entry points"
+    sub="Sorted by sessions. A high bounce rate with high sessions is the single most actionable row on this page."
+    dimension="Landing page"
+    rows={breakdown(rows, (r) => r.landingPath, (k) => k, 25)}
+    filterKey="landing"
+    params={params}
+    action={action}
+  />
+
+  <h2>Pages</h2>
+  <div class="panel">
+    <h3>Every page in the selection</h3>
+    <p class="sub">
+      Views counted per page load. Average time is time on that page; scroll depth is how far down its longest reader got, averaged.
+    </p>
+    {pages.length === 0 ? (
+      <p class="empty">No page views in this window.</p>
+    ) : (
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Page</th>
+              <th class="num">Views</th>
+              <th class="num">Avg. time</th>
+              <th class="num">Avg. scroll</th>
+              <th class="num">Entrances</th>
+              <th class="num">Exits</th>
+              <th class="num">Exit rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pages.map((page) => (
+              <tr>
+                <td>
+                  <a href={page.path} target="_blank" rel="noreferrer">{page.path}</a>
+                  {page.title && <div class="muted" style="font-size:var(--t-label-size)">{page.title}</div>}
+                </td>
+                <td class="num">{page.views}</td>
+                <td class="num">{fmtDuration(page.avgDwellMs)}</td>
+                <td class="num">{fmtPct(page.avgScrollPct / 100)}</td>
+                <td class="num">{page.entrances}</td>
+                <td class="num">{page.exits}</td>
+                <td class="num">{fmtPct(page.exitRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <h2>Behaviour</h2>
+  <div class="grid-2">
+    <HourChart hours={hourHistogram(rows)} />
+    <div class="panel">
+      <h3>Actions taken</h3>
+      <p class="sub">Tracked moments — a download, a completed quiz, a submitted capture. Counted once per session.</p>
+      {actions.length === 0 ? (
+        <p class="empty">No tracked actions in this window.</p>
+      ) : (
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Action</th><th class="num">Sessions</th><th class="num">Of all sessions</th></tr></thead>
+            <tbody>
+              {actions.map((a) => (
+                <tr>
+                  <td>{a.label}</td>
+                  <td class="num">{a.sessions}</td>
+                  <td class="num">{fmtPct(a.sessions / Math.max(1, kpis.sessions), 1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <h3 style="margin-top:16px">Depth of visit</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Pages seen</th><th class="num">Sessions</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            {[1, 2, 3, 4].map((depth) => {
+              const count = rows.filter((r) => (depth === 4 ? r.pageviews >= 4 : r.pageviews === depth)).length;
+              return (
+                <tr>
+                  <td>{depth === 4 ? '4 or more' : depth === 1 ? '1 page' : `${depth} pages`}</td>
+                  <td class="num">{count}</td>
+                  <td class="num">{fmtPct(count / Math.max(1, rows.length), 1)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h2>Exit pages <span class="hint">where sessions ended</span></h2>
+  <BreakdownTable
+    title="Last page of the session"
+    sub="A page that ends most sessions is either the natural finish of a journey or a dead end. The landing-page table tells you which."
+    dimension="Exit page"
+    rows={breakdown(rows, (r) => r.exitPath, (k) => k, 20)}
+    showConversions={false}
+    params={params}
+    action={action}
+  />
+</AdminShell>
