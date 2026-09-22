@@ -6,7 +6,7 @@
  */
 import { db } from './firebase';
 import { WORLDS, worldByKey, type ProfileKey, type WorldKey } from '../data/worlds';
-import { ASSET_COLLECTION, signedUrl } from './wallpaperAssets';
+import { ASSET_COLLECTION, signedUrl, thumbPath } from './wallpaperAssets';
 
 export const PROFILE_KEYS = WORLDS.filter((w) => w.profile).map((w) => w.profile as ProfileKey);
 export const WORLD_KEYS_ALL = WORLDS.map((w) => w.key);
@@ -225,6 +225,47 @@ async function assetDocToTopAsset(doc: FirebaseFirestore.QueryDocumentSnapshot):
 export async function fetchTopAssets(limit = 20): Promise<TopAsset[]> {
   const snap = await db.collection(ASSET_COLLECTION).orderBy('downloads', 'desc').limit(limit).get();
   return Promise.all(snap.docs.map(assetDocToTopAsset));
+}
+
+export interface RankableAsset {
+  id: string;
+  thumbUrl: string | null;
+  worlds: WorldKey[];
+  /** 1–10, the operator's pinned feed position — see AssetDoc.rank. Null = unranked (random in the feed). */
+  rank: number | null;
+}
+
+/**
+ * Every sorted (filed) wallpaper, for the /admin/content "feed ranking"
+ * picker — needs the full catalog, not just the top-N by some metric, since
+ * an operator may want to rank a brand-new photo with zero downloads yet.
+ */
+export async function fetchRankableAssets(limit = 500): Promise<RankableAsset[]> {
+  const snap = await db.collection(ASSET_COLLECTION).where('status', '==', 'sorted').limit(limit).get();
+  const rows = await Promise.all(
+    snap.docs.map(async (doc) => {
+      const d = doc.data();
+      let thumbUrl: string | null = null;
+      try {
+        thumbUrl = await signedUrl(d.storageThumb ?? thumbPath(doc.id), 60 * 60 * 1000);
+      } catch {
+        thumbUrl = null;
+      }
+      return {
+        id: doc.id,
+        thumbUrl,
+        worlds: (Array.isArray(d.worlds) ? d.worlds : []) as WorldKey[],
+        rank: typeof d.rank === 'number' ? d.rank : null,
+      };
+    }),
+  );
+  // Ranked first (in rank order — mirrors the feed), then unranked by id for a stable list.
+  return rows.sort((a, b) => {
+    if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
+    if (a.rank !== null) return -1;
+    if (b.rank !== null) return 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
 }
 
 /** Most-viewed wallpapers (reel/category-grid time-on-screen events). Single orderBy. */

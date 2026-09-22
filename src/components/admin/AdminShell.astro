@@ -35,7 +35,20 @@ const TABS = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <title>{title}</title>
-    <style>
+    <style is:global>
+      /* This stylesheet is the shared design system for every /admin page —
+         cards, tables, panels, the filter bar, badges, meters — but most of
+         what it styles (StatCards, BreakdownTable, FilterBar, and each
+         page's own markup) is rendered through <slot />, one or more
+         component boundaries away from this file. Astro's default scoped
+         styles only tag elements written directly in *this* template, so a
+         non-global block here would silently fail to match any of that
+         slotted content — which is exactly what was happening: /admin/traffic,
+         /admin/audience and /admin/content rendered as unstyled raw HTML
+         (no card borders, no grid layout, default browser tables) because
+         none of the .card/.grid/.panel/table/… rules below ever matched.
+         is:global is required, not optional, for a shared layout stylesheet
+         like this one. */
       /* ---- data-viz palette. Validated (CVD + contrast, both modes) with the
          dataviz validator; the dark column is its own set of steps for the dark
          surface, not an automatic flip. Series 1 = humans, 2 = suspected bots,

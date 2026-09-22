@@ -24,6 +24,8 @@ import {
   fetchMostViewedAssets,
   fetchMostDwelledAssets,
   fetchTopAssets,
+  fetchRankableAssets,
+  type RankableAsset,
 } from '../../lib/adminData';
 import { fmtDuration, fmtPct, queryString } from '../../lib/analytics/dashboard';
 
@@ -37,9 +39,10 @@ let worlds: Awaited<ReturnType<typeof fetchWorldStats>> = [];
 let mostViewed: Awaited<ReturnType<typeof fetchMostViewedAssets>> = [];
 let mostDwelled: Awaited<ReturnType<typeof fetchMostDwelledAssets>> = [];
 let mostDownloaded: Awaited<ReturnType<typeof fetchTopAssets>> = [];
+let rankable: RankableAsset[] = [];
 
 try {
-  [topPages, entryPages, sources, worlds, mostViewed, mostDwelled, mostDownloaded] = await Promise.all([
+  [topPages, entryPages, sources, worlds, mostViewed, mostDwelled, mostDownloaded, rankable] = await Promise.all([
     fetchTopPages(40),
     fetchEntryPages(25),
     fetchTrafficSources(25),
@@ -47,6 +50,7 @@ try {
     fetchMostViewedAssets(20),
     fetchMostDwelledAssets(20),
     fetchTopAssets(20),
+    fetchRankableAssets(500),
   ]);
 } catch (err) {
   console.error('content dashboard query failed', err);
@@ -56,6 +60,11 @@ try {
 const avgDwell = (dwellMs: number, views: number) => (views > 0 ? fmtDuration(dwellMs / views) : '—');
 const totalDownloads = worlds.reduce((sum, w) => sum + w.downloads, 0);
 const totalWorldViews = worlds.reduce((sum, w) => sum + w.views, 0);
+
+// Slot 0 = feed position 1 … slot 9 = position 10.
+const rankedSlots: (RankableAsset | null)[] = Array.from({ length: 10 }, (_, i) =>
+  rankable.find((a) => a.rank === i + 1) ?? null,
+);
 ---
 
 <AdminShell
@@ -66,6 +75,53 @@ const totalWorldViews = worlds.reduce((sum, w) => sum + w.views, 0);
   query={query}
 >
   {fetchError && <p class="empty">Could not read analytics: {fetchError}.</p>}
+
+  <h2>Feed ranking <span class="hint">pin exactly which photo shows in each of the first 10 positions</span></h2>
+  <div class="panel">
+    <p class="sub">
+      A ranked slot is fixed — every visitor sees that wallpaper in that exact position. Every other
+      wallpaper fills the rest of the feed in random order. Set a wallpaper's rank from the grid below;
+      clearing it (—) returns that slot to random.
+    </p>
+    <ol class="rank-slots">
+      {rankedSlots.map((a, i) => (
+        <li class="rank-slot">
+          <span class="n">{i + 1}</span>
+          {a ? (
+            a.thumbUrl ? <img class="thumb" src={a.thumbUrl} alt="" loading="lazy" /> : <span class="thumb-missing">—</span>
+          ) : (
+            <span class="rank-slot-empty">random</span>
+          )}
+        </li>
+      ))}
+    </ol>
+
+    {rankable.length === 0 ? (
+      <p class="empty">No wallpapers filed under a category yet — nothing to rank.</p>
+    ) : (
+      <div class="scroll">
+        <div class="rank-grid" id="rank-grid">
+          {rankable.map((a) => (
+            <figure class="rank-card" data-id={a.id}>
+              {a.thumbUrl ? <img src={a.thumbUrl} alt="" loading="lazy" /> : <span class="thumb-missing">—</span>}
+              <figcaption>
+                <span class="cats">{a.worlds.join(', ') || 'unsorted'}</span>
+                <label class="rank-field">
+                  Rank
+                  <select class="rankselect">
+                    <option value="" selected={a.rank === null}>—</option>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <option value={n} selected={a.rank === n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
 
   <h2>Pages <span class="hint">every page load since tracking began</span></h2>
   <div class="panel">
@@ -263,3 +319,90 @@ const totalWorldViews = worlds.reduce((sum, w) => sum + w.views, 0);
     </div>
   </div>
 </AdminShell>
+
+<style>
+  .rank-slots {
+    list-style: none; margin: 0 0 16px; padding: 0; display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .rank-slot {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px;
+  }
+  .rank-slot .n { font-size: var(--t-label-size); font-weight: 700; color: var(--ink-faint); }
+  .rank-slot img, .rank-slot .thumb-missing {
+    width: 64px; aspect-ratio: 9 / 16; border-radius: 6px; object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .rank-slot-empty {
+    width: 64px; aspect-ratio: 9 / 16; border-radius: 6px; display: flex;
+    align-items: center; justify-content: center; text-align: center;
+    border: 1px dashed var(--hairline-strong); color: var(--ink-faint);
+    font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .thumb-missing {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface-2); color: var(--ink-faint); font-size: 0.6875rem;
+  }
+
+  .rank-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;
+  }
+  .rank-card {
+    margin: 0; border: 1px solid var(--hairline); border-radius: var(--r-m);
+    overflow: hidden; background: var(--surface); display: flex; flex-direction: column;
+  }
+  .rank-card img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; display: block; background: var(--surface-2); }
+  .rank-card figcaption { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .rank-card .cats { font-size: 0.6875rem; color: var(--ink-faint); }
+  .rank-field {
+    display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-label-size); color: var(--ink-soft);
+  }
+  .rank-field select {
+    font: inherit; padding: 2px 6px; border-radius: var(--r-s);
+    border: 1px solid var(--hairline-strong); background: var(--paper); color: var(--ink);
+  }
+</style>
+
+<script>
+  const grid = document.getElementById('rank-grid');
+  if (grid) {
+    async function patchRank(card: HTMLElement, rank: number | null): Promise<boolean> {
+      const id = card.dataset.id!;
+      const select = card.querySelector<HTMLSelectElement>('.rankselect')!;
+      select.disabled = true;
+      let ok = false;
+      try {
+        const res = await fetch(`/api/wallpapers/${id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ rank }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        ok = true;
+      } catch {
+        alert('Could not update rank.');
+      } finally {
+        select.disabled = false;
+      }
+      return ok;
+    }
+
+    grid.addEventListener('change', (e) => {
+      const select = e.target as HTMLSelectElement;
+      if (!select.classList.contains('rankselect')) return;
+      const card = select.closest<HTMLElement>('.rank-card');
+      if (!card) return;
+      const rank = select.value === '' ? null : Number(select.value);
+      void patchRank(card, rank).then((ok) => {
+        if (!ok || rank === null) return;
+        // The server bumps whichever other asset held this rank back to
+        // unranked — mirror that here so the grid doesn't show two cards
+        // claiming the same slot until a reload.
+        grid.querySelectorAll<HTMLElement>('.rank-card').forEach((other) => {
+          if (other === card) return;
+          const sel = other.querySelector<HTMLSelectElement>('.rankselect');
+          if (sel && Number(sel.value) === rank) sel.value = '';
+        });
+      });
+    });
+  }
+</script>

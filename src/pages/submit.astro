@@ -24,7 +24,6 @@ interface Row {
   id: string;
   worlds: string[];
   preferred: boolean;
-  rank: number | null;
   status: string;
   originalFilename: string | null;
   width: number;
@@ -48,7 +47,6 @@ try {
         id: d.id,
         worlds: (v.worlds ?? []) as string[],
         preferred: v.preferred === true,
-        rank: typeof v.rank === 'number' ? v.rank : null,
         status: v.status ?? 'unsorted',
         originalFilename: v.originalFilename ?? null,
         width: v.width ?? 0,
@@ -71,11 +69,6 @@ for (const r of rows) {
 }
 
 const kb = (n: number) => `${Math.round(n / 1024)} KB`;
-
-// Slot 0 = position 1 … slot 9 = position 10, for the "Top 10" overview.
-const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
-  rows.find((r) => r.rank === i + 1) ?? null,
-);
 ---
 
 <BaseLayout title="Submit wallpapers — motivationalwallpaper.com" description="Operator upload" noindex>
@@ -119,28 +112,6 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
       <ul class="queue" id="queue" hidden></ul>
     </form>
 
-    <section class="top10">
-      <h2>Top 10 feed order</h2>
-      <p class="sub">
-        These positions are pinned — a visitor sees them in this exact order
-        first. Every other wallpaper fills the rest of the feed at random.
-        Set a wallpaper's rank from its card below; an empty slot is filled
-        by a random photo.
-      </p>
-      <ol class="slots">
-        {rankedSlots.map((r, i) => (
-          <li class="slot">
-            <span class="n">{i + 1}</span>
-            {r ? (
-              <img src={r.thumbUrl} alt={r.originalFilename ?? r.id} loading="lazy" />
-            ) : (
-              <span class="empty-slot">random</span>
-            )}
-          </li>
-        ))}
-      </ol>
-    </section>
-
     <section class="tally">
       {[{ key: 'unsorted', name: 'Unsorted' }, ...WORLDS].map((w) => (
         <span class="chip"><b>{counts[w.key] ?? 0}</b> {w.name}</span>
@@ -165,15 +136,6 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
             <label class="pref">
               <input type="checkbox" class="prefbox" checked={r.preferred} />
               ★ Preferred
-            </label>
-            <label class="rank">
-              Rank
-              <select class="rankselect">
-                <option value="" selected={r.rank === null}>—</option>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                  <option value={n} selected={r.rank === n}>{n}</option>
-                ))}
-              </select>
             </label>
             <span class="meta">{r.width}×{r.height} · {kb(r.bytes)}</span>
             <button type="button" class="del" aria-label="Delete">Delete</button>
@@ -236,31 +198,6 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
   .queue .s-err { color: #b4341f; }
   .queue .s-run { color: var(--ink-faint); }
 
-  .top10 { margin-bottom: 1.5rem; }
-  .top10 h2 {
-    font-size: var(--t-title2-size, 1.1rem); margin: 0 0 0.35rem;
-  }
-  .top10 .sub { margin: 0 0 12px; max-width: 70ch; font-size: var(--t-small-size); color: var(--ink-soft); }
-  .slots {
-    list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap;
-  }
-  .slot {
-    display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px;
-  }
-  .slot .n {
-    font-size: var(--t-label-size); font-weight: 700; color: var(--ink-faint);
-  }
-  .slot img {
-    width: 64px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 6px;
-    border: 1px solid var(--hairline);
-  }
-  .empty-slot {
-    width: 64px; aspect-ratio: 9 / 16; border-radius: 6px; display: flex;
-    align-items: center; justify-content: center; text-align: center;
-    border: 1px dashed var(--hairline-strong); color: var(--ink-faint);
-    font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em;
-  }
-
   .tally { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
   .chip {
     font-size: var(--t-small-size); color: var(--ink-soft);
@@ -282,13 +219,6 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
   }
   .recat label { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
   .pref { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--ink-soft); }
-  .rank {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--ink-soft);
-  }
-  .rank select {
-    font: inherit; padding: 2px 6px; border-radius: var(--r-s);
-    border: 1px solid var(--hairline-strong); background: var(--paper); color: var(--ink);
-  }
   .meta { font-size: 0.6875rem; color: var(--ink-faint); }
   .del {
     background: none; color: #b4341f; border: 1px solid var(--hairline-strong);
@@ -363,15 +293,11 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
     const fig = document.createElement('figure');
     fig.className = 'card';
     fig.dataset.id = r.id;
-    const rankOptions = Array.from({ length: 10 }, (_, i) => i + 1)
-      .map((n) => `<option value="${n}">${n}</option>`)
-      .join('');
     fig.innerHTML = `
       <img src="${r.thumbUrl}" alt="${r.filename ?? r.id}" loading="lazy" />
       <figcaption>
         <fieldset class="recat" aria-label="Categories">${catFieldset(worlds)}</fieldset>
         <label class="pref"><input type="checkbox" class="prefbox"${r.preferred ? ' checked' : ''} /> ★ Preferred</label>
-        <label class="rank">Rank <select class="rankselect"><option value="">—</option>${rankOptions}</select></label>
         <span class="meta">just uploaded</span>
         <button type="button" class="del" aria-label="Delete">Delete</button>
       </figcaption>`;
@@ -425,14 +351,11 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
     fileInput.value = '';
   });
 
-  // Grid: re-file categories, toggle preferred, set rank, remove on delete.
-  async function patchCard(card: HTMLElement, body: Record<string, unknown>): Promise<boolean> {
+  // Grid: re-file categories, toggle preferred, remove on delete.
+  async function patchCard(card: HTMLElement, body: Record<string, unknown>) {
     const id = card.dataset.id!;
-    const controls = card.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-      'input[type="checkbox"], select',
-    );
-    controls.forEach((i) => (i.disabled = true));
-    let ok = false;
+    const inputs = card.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    inputs.forEach((i) => (i.disabled = true));
     try {
       const res = await fetch(`/api/wallpapers/${id}`, {
         method: 'PATCH',
@@ -440,17 +363,15 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      ok = true;
     } catch {
       alert('Could not update.');
     } finally {
-      controls.forEach((i) => (i.disabled = false));
+      inputs.forEach((i) => (i.disabled = false));
     }
-    return ok;
   }
 
   grid.addEventListener('change', (e) => {
-    const el = e.target as HTMLInputElement | HTMLSelectElement;
+    const el = e.target as HTMLInputElement;
     const card = el.closest('.card') as HTMLElement | null;
     if (!card) return;
     if (el.closest('.recat')) {
@@ -459,21 +380,7 @@ const rankedSlots: (Row | null)[] = Array.from({ length: 10 }, (_, i) =>
       ).map((cb) => cb.value);
       void patchCard(card, { worlds });
     } else if (el.classList.contains('prefbox')) {
-      void patchCard(card, { preferred: (el as HTMLInputElement).checked });
-    } else if (el.classList.contains('rankselect')) {
-      const select = el as HTMLSelectElement;
-      const rank = select.value === '' ? null : Number(select.value);
-      void patchCard(card, { rank }).then((ok) => {
-        if (!ok || rank === null) return;
-        // The server bumps whichever other asset held this rank back to
-        // unranked — mirror that here so the grid doesn't show two cards
-        // claiming the same slot until a reload.
-        grid.querySelectorAll<HTMLElement>('.card').forEach((other) => {
-          if (other === card) return;
-          const sel = other.querySelector<HTMLSelectElement>('.rankselect');
-          if (sel && Number(sel.value) === rank) sel.value = '';
-        });
-      });
+      void patchCard(card, { preferred: el.checked });
     }
   });
 
