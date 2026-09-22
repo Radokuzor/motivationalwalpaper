@@ -17,7 +17,9 @@
  *      (a `complete` call must have them all; a `partial` call need not)
  *   4. recomputes `profile` server-side once routable (any client `profile` is
  *      ignored)
- *   5. upserts the row in Firestore `survey_responses` via the Admin SDK
+ *   5. stamps device (UA-parsed browser/OS/device type) and location
+ *      (edge-header geo — country/region/city, no IP stored) onto the row
+ *   6. upserts the row in Firestore `survey_responses` via the Admin SDK
  *
  * Channel tools (Beehiiv / SMS) are deferred: a present contact is stamped
  * `pending` so a later migration can pick it up. Nothing is sent here.
@@ -30,6 +32,8 @@ import { STEPS, routeProfile, worldForProfile } from '../../data/quiz';
 import { quoteSlug, pickQuoteForFigures } from '../../data/quotes';
 import { db } from '../../lib/firebase';
 import { notifyTelegram, escapeMarkdown } from '../../lib/telegram';
+import { parseUserAgent } from '../../lib/analytics/ua';
+import { readGeo } from '../../lib/analytics/request';
 
 export const prerender = false;
 
@@ -167,6 +171,9 @@ export const POST: APIRoute = async ({ request }) => {
     : null;
   const world = profile ? worldForProfile(profile) : null;
 
+  const ua = parseUserAgent(request.headers.get('user-agent'));
+  const geo = readGeo(request);
+
   const data: Record<string, unknown> = {
     status: complete ? 'complete' : 'partial',
     age: age || null,
@@ -182,6 +189,14 @@ export const POST: APIRoute = async ({ request }) => {
     source: 'screen-one',
     userAgent: request.headers.get('user-agent') ?? null,
     referer: request.headers.get('referer') ?? null,
+    deviceType: ua.deviceType,
+    browser: ua.browser,
+    browserVersion: ua.browserVersion,
+    os: ua.os,
+    osVersion: ua.osVersion,
+    country: geo.country,
+    region: geo.region,
+    city: geo.city,
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (complete) data.completedAt = FieldValue.serverTimestamp();

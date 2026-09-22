@@ -41,6 +41,16 @@ if (profileFilter) exportQuery.set('profile', profileFilter);
 const exportHref = `/admin/responses.csv${exportQuery.toString() ? `?${exportQuery}` : ''}`;
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
+const fmtDevice = (r: (typeof rows)[number]) => {
+  const browser = [r.browser, r.browserVersion?.split('.')[0]].filter(Boolean).join(' ');
+  const os = [r.os, r.osVersion].filter(Boolean).join(' ');
+  const parts = [r.deviceType, browser, os].filter((p): p is string => !!p && p !== 'Unknown');
+  return parts.length ? parts.join(' · ') : '—';
+};
+const fmtLocation = (r: (typeof rows)[number]) => {
+  const parts = [r.city, r.region, r.country].filter((p): p is string => !!p);
+  return parts.length ? parts.join(', ') : '—';
+};
 ---
 
 <!doctype html>
@@ -214,7 +224,7 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
           <tr>
             <th>Created</th><th>Status</th><th>Profile</th><th>Category</th><th>Email</th>
             <th>Phone</th><th>Age</th><th>Gender</th><th>Life</th><th>Inspires</th>
-            <th>Email status</th><th>SMS status</th><th>Downloaded</th>
+            <th>Email status</th><th>SMS status</th><th>Device</th><th>Location</th><th>Downloaded</th>
           </tr>
         </thead>
         <tbody>
@@ -232,6 +242,8 @@ const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—
               <td>{r.inspires.join('; ') || '—'}</td>
               <td>{r.emailStatus ?? '—'}</td>
               <td>{r.smsStatus ?? '—'}</td>
+              <td>{fmtDevice(r)}</td>
+              <td>{fmtLocation(r)}</td>
               <td>
                 {r.downloadedAssets.length === 0 ? '—' : (
                   <span class="snippets">

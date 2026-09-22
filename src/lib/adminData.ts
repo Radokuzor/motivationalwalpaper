@@ -37,6 +37,16 @@ export interface SurveyRow {
   completedAt: string | null;
   /** Wallpaper(s) actually downloaded at capture — stamped by /api/downloads, oldest first. */
   downloadedAssets: DownloadedAsset[];
+  /** Device the respondent took the survey on — parsed from the request's user-agent. */
+  deviceType: string | null;
+  browser: string | null;
+  browserVersion: string | null;
+  os: string | null;
+  osVersion: string | null;
+  /** Location, from Vercel's edge geo headers — no IP address is stored. */
+  country: string | null;
+  region: string | null;
+  city: string | null;
 }
 
 export interface SurveyFilters {
@@ -99,6 +109,14 @@ export async function fetchSurveyResponses(filters: SurveyFilters): Promise<Surv
       updatedAt: isoOrNull(d.updatedAt),
       completedAt: isoOrNull(d.completedAt),
       downloadedAssets: parseDownloadedAssets(d.downloadedAssets),
+      deviceType: d.deviceType ?? null,
+      browser: d.browser ?? null,
+      browserVersion: d.browserVersion ?? null,
+      os: d.os ?? null,
+      osVersion: d.osVersion ?? null,
+      country: d.country ?? null,
+      region: d.region ?? null,
+      city: d.city ?? null,
     };
   });
 
@@ -312,6 +330,12 @@ export function rowsToCsv(rows: SurveyRow[]): string {
     'emailStatus',
     'smsStatus',
     'downloadedAssetIds',
+    'deviceType',
+    'browser',
+    'os',
+    'country',
+    'region',
+    'city',
   ];
   const lines = [header.join(',')];
   for (const r of rows) {
@@ -332,6 +356,12 @@ export function rowsToCsv(rows: SurveyRow[]): string {
         r.emailStatus,
         r.smsStatus,
         r.downloadedAssets.map((a) => a.assetId).filter(Boolean).join('; '),
+        r.deviceType,
+        [r.browser, r.browserVersion].filter(Boolean).join(' '),
+        [r.os, r.osVersion].filter(Boolean).join(' '),
+        r.country,
+        r.region,
+        r.city,
       ]
         .map(csvField)
         .join(','),

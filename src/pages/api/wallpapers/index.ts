@@ -28,8 +28,10 @@
  *   ?world=<key>   sorted assets tagged with that world (preferred first)
  *   ?hero=1        one hero photo per world — the theme grid/category rail/
  *                  category grid use this to replace a world's CSS gradient
- *   ?feed=1        every real photo site-wide, preferred first then newest —
- *                  the reel builds its panels from this alone, no gradients
+ *   ?feed=1        every real photo site-wide — the operator's manually
+ *                  ranked picks (rank 1-10, set on /submit) first in rank
+ *                  order, then everything else shuffled at random — the reel
+ *                  builds its panels from this alone, no gradients
  */
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/firebase';
@@ -141,6 +143,16 @@ interface PublicAsset {
   preferred: boolean;
 }
 
+/** Fisher–Yates — used to randomize the unranked tail of the feed on every request. */
+function shuffled<T>(items: T[]): T[] {
+  const out = items.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 async function toPublicAsset(doc: FirebaseFirestore.DocumentSnapshot): Promise<PublicAsset> {
   const v = doc.data() ?? {};
   const [thumbUrl, originalUrl] = await Promise.all([
@@ -173,12 +185,32 @@ async function fetchSortedDocs() {
   });
 }
 
+/**
+ * Feed order: the operator's manually ranked picks (`rank` 1–10, set on
+ * /submit) occupy the first positions in rank order — this is the literal
+ * "first N photos a visitor sees" — and every other sorted asset fills the
+ * rest of the feed in random order, reshuffled on each fetch (which lands a
+ * new shuffle roughly every `s-maxage`, since the response is edge-cached).
+ */
+async function fetchFeedDocs() {
+  const docs = await fetchSortedDocs();
+  const ranked = docs
+    .filter((d) => {
+      const r = d.data().rank;
+      return typeof r === 'number' && Number.isInteger(r) && r >= 1 && r <= 10;
+    })
+    .sort((a, b) => (a.data().rank as number) - (b.data().rank as number));
+  const rankedIds = new Set(ranked.map((d) => d.id));
+  return [...ranked, ...shuffled(docs.filter((d) => !rankedIds.has(d.id)))];
+}
+
 export const GET: APIRoute = async ({ url }) => {
   if (url.searchParams.get('feed') === '1') {
-    // Every real photo site-wide, preferred first then newest — drives the
-    // reel directly (no gradient placeholder panels; a category with no
-    // photo simply contributes none).
-    const docs = await fetchSortedDocs();
+    // Every real photo site-wide — the operator's ranked 1-10 picks first,
+    // then everything else in random order — drives the reel directly (no
+    // gradient placeholder panels; a category with no photo simply
+    // contributes none).
+    const docs = await fetchFeedDocs();
     const items = await Promise.all(docs.map(toPublicAsset));
     return jsonCached({ items });
   }

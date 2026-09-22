@@ -163,6 +163,11 @@ export interface AssetDoc {
    *  categories. When more than one asset is preferred for the same world,
    *  the most recently updated one wins. */
   preferred: boolean;
+  /** Manually pinned position (1–10) in the site-wide feed — the operator's
+   *  explicit "this is the Nth photo a visitor sees" choice. At most one
+   *  asset holds a given rank at a time (enforced on write). Unranked assets
+   *  fill the remaining feed positions in random order. */
+  rank: number | null;
   source: 'submit';
   sha: string;
   originalFilename: string | null;
@@ -186,7 +191,11 @@ export async function upsertAssetDoc(
 ): Promise<AssetDoc> {
   const ref = db.collection(ASSET_COLLECTION).doc(img.id);
   const existing = await ref.get();
-  const doc: Omit<AssetDoc, 'id'> = {
+  // `rank` is deliberately left out of this object — re-uploading identical
+  // bytes (the common "replace this photo" path) must never clobber a rank
+  // the operator already assigned. It's only stamped null below, once, when
+  // the doc is brand new.
+  const doc: Omit<AssetDoc, 'id' | 'rank'> = {
     status: worlds.length ? 'sorted' : 'unsorted',
     worlds,
     preferred,
@@ -207,9 +216,10 @@ export async function upsertAssetDoc(
     {
       ...doc,
       updatedAt: FieldValue.serverTimestamp(),
-      ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      ...(existing.exists ? {} : { rank: null, createdAt: FieldValue.serverTimestamp() }),
     },
     { merge: true },
   );
-  return { id: img.id, ...doc };
+  const rank = existing.exists ? ((existing.data()?.rank as number | null | undefined) ?? null) : null;
+  return { id: img.id, ...doc, rank };
 }
